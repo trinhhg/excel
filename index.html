@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vocab Studio Pro - Excel Interactive Learning Engine (Light Theme)</title>
+  <title>Vocab Studio Pro - Multi-Exercise Excel Interactive Learning Engine</title>
   
   <!-- Tailwind CSS via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -43,20 +43,20 @@
   <!-- ========================================================================= -->
   <!-- 1. TOP EXCEL HEADER BAR                                                   -->
   <!-- ========================================================================= -->
-  <header class="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
+  <header class="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-xs">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
       
       <!-- Brand & Title -->
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-emerald-700 flex items-center justify-center text-white shadow">
+        <div class="w-10 h-10 rounded-lg bg-emerald-700 flex items-center justify-center text-white shadow-xs">
           <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
         </div>
         <div>
           <div class="flex items-center gap-2">
             <span class="font-extrabold text-base tracking-tight text-gray-900">VOCAB STUDIO <span class="text-emerald-700">PRO</span></span>
-            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">EXCEL ENGINE V2.1</span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">MULTI-EXERCISE V2.2</span>
           </div>
-          <p class="text-xs text-gray-500 hidden sm:block">Trình tạo bài tập Excel tự động chấm điểm • Chuẩn Macro-Free • Giao diện Light</p>
+          <p class="text-xs text-gray-500 hidden sm:block">Hỗ trợ nhiều cột làm bài & chấm điểm độc lập kề cạnh • Chuẩn Excel Light Theme</p>
         </div>
       </div>
 
@@ -64,9 +64,9 @@
       <div class="flex items-center gap-2">
         <div class="hidden lg:flex items-center gap-1 bg-gray-100 border border-gray-200 p-1 rounded-lg text-xs">
           <span class="text-gray-500 px-2 font-medium">Mẫu:</span>
-          <button data-load-sample="chinese" class="px-2.5 py-1 rounded bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 font-medium transition-colors shadow-xs">Tiếng Trung HSK</button>
-          <button data-load-sample="english" class="px-2.5 py-1 rounded bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 font-medium transition-colors shadow-xs">Tiếng Anh IELTS</button>
-          <button data-load-sample="japanese" class="px-2.5 py-1 rounded bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 font-medium transition-colors shadow-xs">Tiếng Nhật JLPT</button>
+          <button data-load-sample="chinese" class="px-2.5 py-1 rounded bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 font-medium transition-colors shadow-2xs">Tiếng Trung HSK (2 bài)</button>
+          <button data-load-sample="english" class="px-2.5 py-1 rounded bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 font-medium transition-colors shadow-2xs">Tiếng Anh IELTS</button>
+          <button data-load-sample="japanese" class="px-2.5 py-1 rounded bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 font-medium transition-colors shadow-2xs">Tiếng Nhật JLPT</button>
         </div>
 
         <!-- TTS Language Selector -->
@@ -83,7 +83,7 @@
         </div>
 
         <!-- Primary Export CTA -->
-        <button id="btnOpenExportModal" class="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm px-4 py-2 rounded-lg shadow transition-all hover:scale-[1.01] active:scale-[0.99]">
+        <button id="btnOpenExportModal" class="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm px-4 py-2 rounded-lg shadow-sm transition-all hover:scale-[1.01] active:scale-[0.99]">
           <i data-lucide="download" class="w-4 h-4"></i>
           <span>Xuất File Excel (.xlsx)</span>
         </button>
@@ -95,7 +95,7 @@
   <!-- ========================================================================= -->
   <!-- 2. EXCEL RIBBON TOOLBAR                                                   -->
   <!-- ========================================================================= -->
-  <div class="bg-white border-b border-gray-200 py-2 shadow-xs">
+  <div class="bg-white border-b border-gray-200 py-2 shadow-2xs">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-center justify-between gap-3">
       
       <!-- Action Buttons Left -->
@@ -103,11 +103,6 @@
         <button id="btnOpenImportModal" class="btn-ribbon btn-ribbon-primary" title="Dán dữ liệu thô">
           <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
           <span>Quét Dữ Liệu (Import)</span>
-        </button>
-
-        <button id="btnOpenTargetColModal" class="btn-ribbon" title="Chỉ định cột làm đáp án để hệ thống đối chiếu chấm điểm">
-          <i data-lucide="check-check" class="w-3.5 h-3.5 text-emerald-600"></i>
-          <span>Chọn Cột Đáp Án Chuẩn</span>
         </button>
 
         <button id="btnAddRow" class="btn-ribbon" title="Thêm 1 hàng mới">
@@ -147,8 +142,7 @@
           <span id="statTotalCols" class="font-bold text-gray-800 font-mono">0</span>
         </div>
         <div class="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 px-2.5 py-1 rounded">
-          <span>Cột đáp án:</span>
-          <span id="statTargetColName" class="font-bold">Chưa chọn</span>
+          <span id="statPairCount" class="font-bold">0 bài tập</span>
         </div>
       </div>
 
@@ -156,7 +150,7 @@
   </div>
 
   <!-- ========================================================================= -->
-  <!-- 3. SHEET TABS NAVIGATION (SHEET 1 VS SHEET 2)                             -->
+  <!-- 3. SHEET TABS NAVIGATION                                                  -->
   <!-- ========================================================================= -->
   <div class="bg-gray-100 border-b border-gray-200">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
@@ -191,20 +185,20 @@
     <!-- ===================================================================== -->
     <div id="view_editor" class="sheet-view space-y-3">
       
-      <!-- Hướng dẫn sử dụng ngắn gọn -->
+      <!-- Hướng dẫn sử dụng tính năng nhiều bài tập -->
       <div class="bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-lg p-3 text-xs flex items-center justify-between gap-2">
         <div class="flex items-center gap-2">
           <i data-lucide="info" class="w-4 h-4 text-emerald-700 shrink-0"></i>
           <span>
-            <strong>Nguyên tắc hoạt động:</strong> 
-            Dữ liệu mỗi dòng được gắn chặt với <strong>Mã Từ (ID)</strong> ở cột đầu tiên. Khi trộn đề, toàn bộ hàng ngang sẽ di chuyển cùng nhau để không bao giờ lệch cột. 
-            Bạn có thể nhấp vào tiêu đề cột để sửa tên hoặc để trống theo ý muốn.
+            <strong>Tính năng tạo nhiều bài tập trong 1 sheet:</strong> 
+            Bạn có thể bấm nút <strong>[+ Tạo ô làm bài]</strong> trên bất kỳ cột nào (ví dụ vừa tạo ô gõ Hán Tự, vừa tạo ô gõ Pinyin). 
+            Khi sang Sheet 2 hoặc xuất file Excel, cặp ô <strong>[Làm Bài]</strong> và <strong>[Kết Quả]</strong> sẽ được đặt <strong>ngay bên cạnh cột đáp án tương ứng</strong> với cách tính điểm hoàn toàn độc lập!
           </span>
         </div>
       </div>
 
       <!-- Excel Table Container -->
-      <div class="overflow-x-auto bg-white border border-gray-200 rounded-xl shadow-xs">
+      <div class="overflow-x-auto bg-white border border-gray-200 rounded-xl shadow-2xs">
         <table class="excel-grid">
           <thead id="gridThead"></thead>
           <tbody id="gridTbody"></tbody>
@@ -213,48 +207,18 @@
     </div>
 
     <!-- ===================================================================== -->
-    <!-- SHEET 2: LÀM TEST THỬ TRỰC TIẾP (INTERACTIVE TEST MODE)                -->
+    <!-- SHEET 2: LÀM TEST THỬ TRỰC TIẾP (TEST MODE)                            -->
     <!-- ===================================================================== -->
     <div id="view_test" class="sheet-view hidden space-y-4">
       
-      <!-- BẢNG ĐIỂM KPI DASHBOARD THIẾT KẾ ĐẸP CHUẨN LIGHT THEME -->
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <!-- Card 1: Tổng câu -->
-        <div class="kpi-card p-3.5 text-center">
-          <span class="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Tổng Số Câu</span>
-          <span id="testKpiTotal" class="text-2xl font-black text-gray-900 font-mono">0</span>
-        </div>
-        <!-- Card 2: Đã làm -->
-        <div class="kpi-card p-3.5 text-center">
-          <span class="text-[11px] font-bold text-blue-600 uppercase tracking-wider block mb-1">Đã Làm</span>
-          <span id="testKpiDone" class="text-2xl font-black text-blue-700 font-mono">0</span>
-        </div>
-        <!-- Card 3: Số câu Đúng -->
-        <div class="kpi-card p-3.5 text-center bg-emerald-50/50 border-emerald-200">
-          <span class="text-[11px] font-bold text-emerald-700 uppercase tracking-wider block mb-1">Số Câu Đúng</span>
-          <span id="testKpiCorrect" class="text-2xl font-black text-emerald-700 font-mono">0</span>
-        </div>
-        <!-- Card 4: Số câu Sai -->
-        <div class="kpi-card p-3.5 text-center bg-red-50/50 border-red-200">
-          <span class="text-[11px] font-bold text-red-600 uppercase tracking-wider block mb-1">Số Câu Sai</span>
-          <span id="testKpiWrong" class="text-2xl font-black text-red-600 font-mono">0</span>
-        </div>
-        <!-- Card 5: Điểm số thang 10 -->
-        <div class="kpi-card p-3.5 text-center bg-yellow-50/40 border-yellow-200">
-          <span class="text-[11px] font-bold text-amber-700 uppercase tracking-wider block mb-1">Điểm Số (10)</span>
-          <span id="testKpiScore" class="text-2xl font-black text-amber-800 font-mono">0.0</span>
-        </div>
-        <!-- Card 6: Tiến độ -->
-        <div class="kpi-card p-3.5 text-center">
-          <span class="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Tiến Độ</span>
-          <span id="testKpiProgress" class="text-2xl font-black text-gray-900 font-mono">0%</span>
-        </div>
-      </div>
+      <!-- BẢNG ĐIỂM KPI DASHBOARD (ĐỘC LẬP TỪNG BÀI TẬP VÀ TỔNG HỢP) -->
+      <div id="testKpiCardsContainer" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3"></div>
 
       <!-- Thanh công cụ Test Mode -->
-      <div class="flex items-center justify-between bg-white border border-gray-200 p-3 rounded-xl">
-        <div class="text-xs text-gray-600">
-          <span>Gõ đáp án vào cột màu vàng <strong>[Ô Làm Bài]</strong> bên dưới để thử nghiệm phản hồi đúng/sai và tính điểm tự động.</span>
+      <div class="flex items-center justify-between bg-white border border-gray-200 p-3 rounded-xl shadow-2xs">
+        <div class="text-xs text-gray-600 flex items-center gap-2">
+          <i data-lucide="keyboard" class="w-4 h-4 text-emerald-600"></i>
+          <span>Gõ đáp án vào các ô màu vàng. Nhấn phím <strong>[Enter]</strong> hoặc mũi tên <strong>[↓]</strong> để chuyển mượt mà xuống dòng tiếp theo!</span>
         </div>
         <div>
           <button id="btnResetTest" class="btn-ribbon text-xs" title="Xóa toàn bộ câu trả lời test để làm lại từ đầu">
@@ -347,35 +311,6 @@
   </div>
 
   <!-- ========================================================================= -->
-  <!-- MODAL: CHỌN CỘT ĐÁP ÁN CHUẨN                                             -->
-  <!-- ========================================================================= -->
-  <div id="targetColModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-white border border-gray-200 rounded-xl max-w-md w-full shadow-2xl overflow-hidden">
-      <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
-        <h3 class="font-bold text-sm text-gray-900">Chọn Cột Đáp Án Để Chấm Điểm</h3>
-        <button id="btnCloseTargetModal" class="text-gray-400 hover:text-gray-600">
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
-      </div>
-
-      <div class="p-5 space-y-3 text-xs">
-        <p class="text-gray-600">
-          Học sinh sẽ nhìn các cột thông tin khác (nghĩa tiếng Việt, pinyin, câu...) và nhập nội dung tương ứng với cột bạn chọn bên dưới:
-        </p>
-        <div>
-          <label class="block font-bold text-gray-700 mb-1">Cột làm đáp án chuẩn:</label>
-          <select id="targetColSelect" class="w-full bg-white border border-gray-300 rounded-lg p-2 text-xs font-semibold text-gray-800 focus:border-emerald-600 outline-none"></select>
-        </div>
-      </div>
-
-      <div class="px-5 py-3 border-t border-gray-200 flex items-center justify-end gap-2 bg-gray-50">
-        <button onclick="App.closeTargetColModal()" class="px-3 py-1.5 text-xs text-gray-600 hover:text-gray-900">Hủy</button>
-        <button id="btnConfirmTargetCol" class="btn-ribbon btn-ribbon-primary px-4 py-1.5 text-xs">Xác Nhận</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ========================================================================= -->
   <!-- MODAL: XUẤT FILE EXCEL (.XLSX)                                            -->
   <!-- ========================================================================= -->
   <div id="exportModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
@@ -396,7 +331,7 @@
 
       <div class="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
         <div>
-          <span id="exportTargetColInfo" class="inline-block px-3 py-1 bg-emerald-100 text-emerald-800 font-bold rounded-full mb-3 text-xs"></span>
+          <span id="exportTargetInfo" class="inline-block px-3 py-1 bg-emerald-100 text-emerald-800 font-bold rounded-full mb-3 text-xs"></span>
         </div>
 
         <div>
@@ -428,10 +363,17 @@
             <i data-lucide="shield-check" class="w-4 h-4 text-emerald-700"></i>
             <span>Bảo vệ chống xóa công thức & đề bài:</span>
           </div>
+          
           <label class="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" id="exportProtect" checked class="rounded border-gray-300 text-emerald-600">
-            <span class="text-gray-700">Khóa Sheet bảo vệ (Học sinh chỉ được phép nhập vào ô màu vàng)</span>
+            <span class="text-gray-700">Khóa Sheet bảo vệ (Học sinh chỉ được phép nhập vào các ô màu vàng)</span>
           </label>
+
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="exportHideAnswers" class="rounded border-gray-300 text-emerald-600">
+            <span class="text-gray-700">Ẩn các cột đáp án gốc trong Excel (Học sinh không nhìn thấy trước)</span>
+          </label>
+
           <div>
             <label class="block text-[11px] text-gray-500 mb-1">Mật khẩu khóa Sheet (Để trống nếu không cần mật khẩu):</label>
             <input type="text" id="exportPassword" placeholder="Để trống nếu chỉ cần khóa thông thường" class="w-full bg-white border border-gray-300 rounded px-2.5 py-1 text-gray-800">
