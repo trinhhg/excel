@@ -1,46 +1,56 @@
-# 📘 VOCAB STUDIO PRO - EXCEL INTERACTIVE LEARNING ENGINE
+# 📘 VOCAB STUDIO PRO - EXCEL INTERACTIVE LEARNING ENGINE (LIGHT THEME V2.1)
 
-> **Trình tạo đề & Luyện từ vựng Excel tương tác thông minh (2 tầng Web & Native .xlsx không cần Macro/VBA)**  
-> Được thiết kế chuyên biệt để đóng gói và thương mại hóa các file Excel bài tập từ vựng tự động chấm điểm cho học sinh, sinh viên và người tự học ngoại ngữ (Tiếng Anh IELTS/TOEIC, Tiếng Trung HSK, Tiếng Nhật JLPT, Tiếng Hàn Topik...).
+> **Trình tạo đề & Luyện từ vựng Excel tương tác thông minh (Giao diện chuẩn Excel Light Theme, không Macro/VBA, tự động chấm điểm)**  
+> Tối ưu chuyên biệt cho mọi ngôn ngữ: **Tiếng Trung HSK/TOCFL** (Hán tự, Pinyin, Nghĩa, Câu tiếng Trung, Pinyin câu, Dịch câu), **Tiếng Anh IELTS/TOEIC**, **Tiếng Nhật JLPT**, **Tiếng Hàn Topik**...
 
 ---
 
-## 🌟 TỔNG QUAN TÍNH NĂNG ĐỘT PHÁ
+## 🌟 CÁC ĐIỂM CẢI TIẾN ĐỘT PHÁ Ở PHIÊN BẢN V2.1
 
-### 1. Xuất file Native Excel (.xlsx) thương mại - KHÔNG DÙNG MACRO / VBA
-- **Tương thích 100%:** Mở mượt mà trên **Microsoft Excel (2016, 2019, 2021, Office 365, Excel Online)**, **WPS Office**, và **Google Sheets**. Không bị chặn cảnh báo bảo mật Macro từ Microsoft!
-- **Dashboard KPI đỉnh cao trên đầu trang tính:**
-  - Tự động thống kê: *Tổng số câu*, *Số câu đã làm*, *Số câu Đúng*, *Số câu Sai*.
-  - Tự động tính điểm hệ 10 (`ROUND`).
-  - Thanh tiến độ đồ họa khối trực quan (`■■■■■□□□□□ 50%`) tự co giãn theo tiến độ.
-- **Cơ chế Nộp bài mới chấm (Exam Submit Flow):**
-  - Dropdown trạng thái tại ô `J3`: `Chưa nộp` / `Đã nộp`.
-  - Khi `Chưa nộp`: Ô kết quả hiển thị `⏳ Đã ghi nhận` để học sinh tự tin đã nhập, nhưng không lộ đáp án đúng/sai.
-  - Khi chuyển sang `Đã nộp`: Cột kết quả đồng loạt chấm điểm `✓ ĐÚNG` / `✗ SAI` và kích hoạt bảng điểm tổng.
-- **Cơ chế Ô che mở khóa (Scratch & Reveal):**
-  - Nội dung gợi ý (Pinyin, Nghĩa tiếng Việt, ví dụ câu) được khóa mặc định: `🔒 [Nhập đúng để mở]`.
-  - Khi học sinh gõ đúng đáp án (hoặc nộp bài): Ô che tự động giải mã và bung nội dung thật ra ngay lập tức.
-- **Hỗ trợ nhiều đáp án đồng nghĩa:**
-  - Cho phép người bán cài đặt nhiều đáp án đúng cho 1 câu, phân cách bằng dấu pipe `|` (Ví dụ: `rich|wealthy|plentiful` hoặc `bận rộn|bận`).
-  - Không phân biệt hoa thường, tự động cắt tỉa khoảng trắng thừa (`TRIM` & `LOWER`).
-- **Khóa bảo vệ Sheet (Sheet Protection):**
-  - Khóa toàn bộ ô đề bài, tiêu đề và công thức tính toán.
-  - Chỉ mở khóa duy nhất các ô màu vàng để học sinh nhập đáp án.
-  - Cột đáp án gốc và dữ liệu nhạy cảm được ẩn hoàn toàn (`hidden = true`).
-- **Nạp ngược file Excel (Reverse Import):**
-  - Kéo thả file `.xlsx` đã xuất trước đó vào tool để phục hồi 100% dữ liệu gốc (kể cả metadata ẩn), cho phép sửa từ, thêm bớt câu và xuất lại đề mới.
+### 1. Phân hệ Tiếng Trung & Đa Ngôn Ngữ Linh Hoạt
+- **Cấu trúc thực tế đầy đủ nhiều cột:** Hỗ trợ cùng lúc nhiều cột thông tin: `Hán tự`, `Pinyin`, `Nghĩa tiếng Việt`, `Câu tiếng Trung`, `Pinyin của câu`, `Dịch nghĩa câu`.
+- **Cơ chế gõ linh hoạt:**
+  - Nhìn nghĩa tiếng Việt hoặc Pinyin để gõ Pinyin trên bàn phím (IME) ra chữ Hán.
+  - Hoặc nhìn Hán tự để gõ Pinyin.
+  - Hoặc đối với tiếng Anh/Nhật/Hàn: Nhìn nghĩa tiếng Việt để gõ từ vựng của tiếng đó.
 
-### 2. Universal Multi-Engine Parser
-- Tự động phân tích tần suất ký tự để nhận diện phân cách: Tab (`\t`), CSV (`,`), Chấm phẩy (`;`), Gạch ngang (` - `), Hai chấm (`:`), Pipe (`|`), Đa khoảng trắng.
-- Tự động nhận diện chữ Hán (`[\u4e00-\u9fff]`), thanh điệu Pinyin (`[āáǎà...]`), từ loại tiếng Anh `(n), (v), (adj)`, phiên âm IPA `[/.../]`.
-- Studio xem trước & Gán vai trò từng cột trực quan trước khi nạp.
+### 2. Quét Dữ Liệu Tự Do (Universal Parser) - Không Tự Gán Sai Vai Trò
+- Khi dán dữ liệu vào, hệ thống tự động chia cột theo dấu Tab (`\t`), Phẩy (`,`), Chấm phẩy (`;`), Pipe (`|`), Gạch ngang (` - `)...
+- **Tên cột để trống hoặc giữ nguyên số thứ tự Cột 1, Cột 2...** Người dùng có thể tùy ý sửa tên cột hoặc để trống mà không bị ép buộc gán vai trò sai lệch.
+- Cột dữ liệu nào không chọn làm đáp án thì khi xuất file Excel sẽ hiển thị bình thường như một cột tham khảo, không sinh công thức thừa.
 
-### 3. Hệ thống Luyện tập & Gamification trực tiếp trên Web
-- **Bảng tính Live:** Gõ đáp án trực tiếp trên web với hiệu ứng đổi màu xanh/đỏ thời gian thực.
-- **Thẻ Flashcard 3D:** Hiệu ứng lật thẻ 180° mặt trước/sau cực mượt, phím tắt `Space` để lật, phím mũi tên `←` / `→` đổi thẻ.
-- **Trắc nghiệm phản xạ 4 lựa chọn (Quiz):** Tự động bốc 3 đáp án sai từ các dòng khác làm đáp án nhiễu, đếm chuỗi Combo Đúng liên tiếp (`🔥 Combo x3, x5...`).
-- **Web Speech Text-to-Speech (TTS):** Phát âm chuẩn giọng bản xứ không cần backend, tối ưu riêng cho `zh-CN`, `en-US`, `ja-JP`, `ko-KR`.
-- **Âm thanh tổng hợp (Web Audio API):** Tự sinh hiệu ứng âm thanh ting ting khi đúng, âm trầm khi sai, và âm mừng chiến thắng kèm pháo hoa (Canvas Confetti).
+### 3. Nút "Chọn Cột Đáp Án Chuẩn" - Tự Động Chèn Ô Nhập & Kết Quả
+- Có nút chuyên dụng trên thanh công cụ: **[Chọn Cột Đáp Án Chuẩn]**.
+- Người dùng chỉ cần bấm nút và chọn cột mục tiêu (Ví dụ: Cột Hán tự hoặc Cột Từ vựng).
+- Hệ thống sẽ tự động liên kết và sinh cặp cột:
+  - `[Ô Làm Bài (Học Sinh Nhập)]`: Nền vàng kem `#FEFCE8` có viền nổi bật, mở khóa cho học sinh gõ.
+  - `[Kết Quả Chấm]`: Tự động so sánh với cột đáp án chuẩn:
+    `=IF(TRIM(InCell)="","",IF(ISNUMBER(SEARCH("|"&LOWER(TRIM(InCell))&"|","|"&LOWER(TRIM(TargetCell))&"|")),"✓ ĐÚNG","✗ SAI"))`
+  - Hỗ trợ nhiều đáp án đồng nghĩa ngăn cách bằng dấu `|` (Ví dụ: `bận|bận rộn` hoặc `rich|wealthy`).
+  - Định dạng màu tự động: `✓ ĐÚNG` nền xanh lá `#DCFCE7`, chữ xanh `#15803D` // `✗ SAI` nền đỏ `#FEE2E2`, chữ đỏ `#B91C1C`.
+
+### 4. Cơ Chế Mã Từ (ID) - Khóa Chặt Hàng Ngang Khi Trộn Đề
+- Mỗi dòng dữ liệu được định danh bằng một **Mã Từ (ID)** duy nhất (`ID-001`, `ID-002`, `ID-003`...).
+- Khi bấm **[Trộn Hàng (Fisher-Yates)]**: Chỉ xáo trộn thứ tự các hàng ngang, toàn bộ các cột của dòng đó luôn di chuyển cùng nhau theo Mã Từ. **Tuyệt đối không đảo cột dọc, không bao giờ lệch đáp án!**
+- Nút **[Thứ Tự Gốc]**: Dễ dàng khôi phục lại trật tự ban đầu theo Mã Từ bất kỳ lúc nào.
+
+### 5. Sheet 2: Làm Test Thử Trực Tiếp Trước Khi Xuất File
+- Tab **[Sheet 2: Làm Test Thử Trực Tiếp]** cung cấp môi trường làm bài y hệt như trên file Excel thật:
+  - Học sinh/người bán có thể gõ trực tiếp đáp án vào ô màu vàng để test trước độ nhạy và tính chuẩn xác của đề bài.
+  - Tích hợp phát âm giọng đọc bản xứ (Web Speech TTS) từng từ, từng câu.
+  - **Bảng điểm KPI Dashboard thiết kế siêu đẹp, tối giản chuẩn Light Theme:**
+    - Tổng số câu
+    - Đã làm
+    - Số câu Đúng
+    - Số câu Sai
+    - Điểm số hệ 10
+    - Tiến độ hoàn thành (%)
+  - Bắn pháo hoa Confetti và âm thanh chúc mừng khi hoàn thành 100%!
+
+### 6. File Excel Xuất Ra (.xlsx) Hoạt Động 100% Không Lỗi
+- **Loại bỏ hoàn toàn các logic dropdown phức tạp dễ lỗi:** Mở file lên là học sinh có thể gõ ngay vào các ô màu vàng, kết quả và bảng điểm tự động nhảy thời gian thực.
+- **Khóa bảo vệ Sheet (Sheet Protection):** Chỉ mở khóa duy nhất các ô học sinh nhập, bảo vệ toàn bộ đề bài và công thức tính điểm không bị xóa nhầm.
+- Hoạt động mượt mà trên **Microsoft Excel, WPS Office, Google Sheets**.
 
 ---
 
@@ -48,8 +58,8 @@
 
 ```text
 vocab-studio-pro/
-├── index.html        # Giao diện chính (Tailwind CSS, Icons, Modals, Tab Layout)
-├── style.css         # Hiệu ứng Glassmorphism, 3D Flashcard flip, custom scrollbars
-├── app.js            # Controller: Parser, Table Grid, Flashcards, Quiz, TTS, Audio SFX
-├── excel-engine.js   # Bộ tạo file Excel chuyên nghiệp với ExcelJS, Formulas, Sheet Protection
-└── README.md         # Hướng dẫn chi tiết & Cẩm nang kinh doanh file Excel
+├── index.html        # Giao diện chính chuẩn Excel Light Theme, thanh công cụ Ribbon, 2 Sheet Tab
+├── style.css         # Lưới bảng tính Excel Grid, thẻ KPI, thanh cuộn tùy biến
+├── app.js            # Controller quản lý dữ liệu, Mã Từ, xóa hàng/cột, Test mode, TTS
+├── excel-engine.js   # Bộ xuất file Excel .xlsx chuyên nghiệp bằng ExcelJS
+└── README.md         # Tài liệu hướng dẫn
