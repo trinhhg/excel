@@ -1,15 +1,20 @@
 /**
- * VOCAB STUDIO PRO - SPREADSHEET ENGINE & CONTROLLER (V2.1 REFACTORED)
- * Quét dữ liệu tự do, quản lý Mã Từ hàng ngang, xóa hàng/cột, Test thử trực tiếp, xuất Excel chuẩn
+ * VOCAB STUDIO PRO - SPREADSHEET ENGINE & CONTROLLER (V2.2 REFACTORED)
+ * Hỗ trợ nhiều bài tập (multi-target) độc lập, ô nhập & kết quả kề cạnh ô đáp án
+ * Khắc phục triệt để lỗi nhảy chữ, Enter trượt dòng mượt mà, quản lý Mã Từ hàng ngang
  */
 
-// Bộ dữ liệu mẫu thực tế chuẩn nhiều cột (Tiếng Trung, Anh, Nhật)
+// Bộ dữ liệu mẫu thực tế
 const SAMPLE_DATASETS = {
   chinese: {
     name: 'Tiếng Trung HSK 3 (Hán tự • Pinyin • Nghĩa • Câu ví dụ • Pinyin câu • Dịch câu)',
     delimiter: '\t',
     columns: ['Hán tự', 'Pinyin', 'Nghĩa tiếng Việt', 'Câu tiếng Trung', 'Pinyin câu', 'Dịch nghĩa câu'],
-    targetIndex: 0, // Mặc định gõ Hán tự (nhập pinyin ra hán tự)
+    // Mặc định tạo sẵn 2 bài tập kề cạnh: Gõ Hán tự VÀ Gõ Pinyin
+    defaultPairs: [
+      { targetIndex: 0, inputTitle: 'Ô Làm Bài (Gõ Hán Tự)', resultTitle: 'Kết Quả Hán Tự' },
+      { targetIndex: 1, inputTitle: 'Ô Làm Bài (Gõ Pinyin)', resultTitle: 'Kết Quả Pinyin' }
+    ],
     text: `苹果\tpíngguǒ\tquả táo\t我非常喜欢吃苹果。\tWǒ fēicháng xǐhuan chī píngguǒ.\tTôi rất thích ăn táo.
 满意\tmǎnyì\thài lòng\t经理对他的工作很满意。\tJīnglǐ duì tā de gōngzuò hěn mǎnyì.\tGiám đốc rất hài lòng với công việc của anh ấy.
 照顾\tzhàogù\tchăm sóc\t生病的时候要好好照顾自己。\tShēngbìng de shíhou yào hǎohǎo zhàogù zìjǐ.\tKhi bị ốm phải chăm sóc bản thân thật tốt.
@@ -21,7 +26,9 @@ const SAMPLE_DATASETS = {
     name: 'Tiếng Anh IELTS C1 (Từ vựng • Phiên âm IPA • Từ loại • Nghĩa tiếng Việt • Câu ví dụ)',
     delimiter: '\t',
     columns: ['Từ vựng', 'Phiên âm IPA', 'Từ loại', 'Nghĩa tiếng Việt', 'Câu ví dụ'],
-    targetIndex: 0,
+    defaultPairs: [
+      { targetIndex: 0, inputTitle: 'Ô Gõ Từ Vựng', resultTitle: 'Kết Quả Từ Vựng' }
+    ],
     text: `Abundant\t/əˈbʌndənt/\t(adj)\tdồi dào, phong phú\tThe country has abundant natural resources.
 Mitigate\t/ˈmɪtɪɡeɪt/\t(v)\tlàm giảm nhẹ, làm dịu\tMeasures were taken to mitigate the risks.
 Substantial\t/səbˈstænʃəl/\t(adj)\tđáng kể, quan trọng\tA substantial amount of funding was provided.
@@ -32,7 +39,10 @@ Scrutinize\t/ˈskruːtənaɪz/\t(v)\txem xét kỹ lưỡng\tEvery detail was ca
     name: 'Tiếng Nhật JLPT (Kanji • Hiragana • Nghĩa tiếng Việt • Ví dụ)',
     delimiter: '\t',
     columns: ['Kanji', 'Hiragana', 'Nghĩa tiếng Việt', 'Câu ví dụ'],
-    targetIndex: 0,
+    defaultPairs: [
+      { targetIndex: 0, inputTitle: 'Gõ Kanji', resultTitle: 'Kết Quả Kanji' },
+      { targetIndex: 1, inputTitle: 'Gõ Hiragana', resultTitle: 'Kết Quả Hiragana' }
+    ],
     text: `約束\tやくそく\tlời hứa, cuộc hẹn\t友達と約束があります。
 案内\tあんない\thướng dẫn, dẫn đường\t京都の町を案内します。
 複雑\tふくざつ\tphức tạp\tこの文法は少し複雑です。
@@ -43,19 +53,17 @@ Scrutinize\t/ˈskruːtənaɪz/\t(v)\txem xét kỹ lưỡng\tEvery detail was ca
 const App = (function () {
   'use strict';
 
-  // Trạng thái ứng dụng
   const state = {
     columns: [],
     rows: [],
     originalRows: [],
     selectedRowIndices: new Set(),
     activeTab: 'editor', // 'editor' | 'test'
-    targetColKey: null,
+    exercisePairs: [],
     testInputs: {},
     ttsLang: 'auto'
   };
 
-  // Web Audio Context cho hiệu ứng âm thanh
   let audioCtx = null;
   function getAudioContext() {
     if (!audioCtx) {
@@ -115,7 +123,6 @@ const App = (function () {
     }
   }
 
-  // Web Speech TTS
   function speak(text) {
     if (!('speechSynthesis' in window) || !text) return;
     window.speechSynthesis.cancel();
@@ -147,23 +154,25 @@ const App = (function () {
     const lines = sample.text.split(/\r?\n/).filter(l => l.trim().length > 0);
     const parsedMatrix = lines.map(line => line.split(sample.delimiter).map(c => c.trim()));
 
-    // Khởi tạo danh sách cột: Tên cột giữ nguyên hoặc để trống, không tự chọn sai vai trò
     state.columns = sample.columns.map((colName, idx) => ({
       id: `col_${Date.now()}_${idx}`,
       key: `col_${idx}`,
-      title: colName || `Cột ${idx + 1}`,
-      isTarget: idx === sample.targetIndex
+      title: colName || `Cột ${idx + 1}`
     }));
 
-    state.targetColKey = state.columns[sample.targetIndex]?.key || state.columns[0]?.key;
+    state.exercisePairs = (sample.defaultPairs || []).map((dp, pIdx) => {
+      const targetCol = state.columns[dp.targetIndex];
+      return {
+        id: `pair_${Date.now()}_${pIdx}`,
+        targetColKey: targetCol ? targetCol.key : state.columns[0].key,
+        inputTitle: dp.inputTitle || `Ô Gõ [${targetCol ? targetCol.title : 'Đáp án'}]`,
+        resultTitle: dp.resultTitle || `Kết Quả [${targetCol ? targetCol.title : 'Đáp án'}]`
+      };
+    });
 
-    // Gán dữ liệu từng dòng kèm Mã Từ định danh hàng ngang (ID-001, ID-002...)
     state.rows = parsedMatrix.map((rowArr, rIdx) => {
       const code = `ID-${String(rIdx + 1).padStart(3, '0')}`;
-      const rowObj = {
-        id: rIdx + 1,
-        code: code
-      };
+      const rowObj = { id: rIdx + 1, code: code };
       state.columns.forEach((col, cIdx) => {
         rowObj[col.key] = rowArr[cIdx] || '';
       });
@@ -208,12 +217,9 @@ const App = (function () {
     document.getElementById('btnDeleteSelectedRows')?.addEventListener('click', deleteSelectedRows);
     document.getElementById('btnShuffleRows')?.addEventListener('click', shuffleRows);
     document.getElementById('btnResetRows')?.addEventListener('click', resetRows);
-    document.getElementById('btnOpenTargetColModal')?.addEventListener('click', openTargetColModal);
     document.getElementById('selectAllRowsCheckbox')?.addEventListener('change', toggleSelectAllRows);
     document.getElementById('gridSearchInput')?.addEventListener('input', handleSearch);
 
-    document.getElementById('btnCloseTargetModal')?.addEventListener('click', closeTargetColModal);
-    document.getElementById('btnConfirmTargetCol')?.addEventListener('click', confirmTargetCol);
     document.getElementById('btnResetTest')?.addEventListener('click', resetTestInputs);
 
     document.getElementById('btnOpenExportModal')?.addEventListener('click', openExportModal);
@@ -248,20 +254,14 @@ const App = (function () {
   function renderStatsHeader() {
     const totalEl = document.getElementById('statTotalRows');
     const colCountEl = document.getElementById('statTotalCols');
-    const targetNameEl = document.getElementById('statTargetColName');
+    const pairCountEl = document.getElementById('statPairCount');
 
     if (totalEl) totalEl.textContent = state.rows.length;
     if (colCountEl) colCountEl.textContent = state.columns.length;
-
-    const targetCol = state.columns.find(c => c.key === state.targetColKey);
-    if (targetNameEl) {
-      targetNameEl.textContent = targetCol ? targetCol.title : 'Chưa chọn';
-    }
+    if (pairCountEl) pairCountEl.textContent = `${state.exercisePairs.length} bài tập`;
   }
 
-  // ==========================================
-  // SHEET 1: BẢNG TÍNH & BIÊN TẬP DỮ LIỆU
-  // ==========================================
+  // SHEET 1: GRID
   function renderSpreadsheetGrid(filteredRows = null) {
     const thead = document.getElementById('gridThead');
     const tbody = document.getElementById('gridTbody');
@@ -279,23 +279,30 @@ const App = (function () {
     `;
 
     state.columns.forEach((col, idx) => {
-      const isTarget = col.key === state.targetColKey;
       const colLetter = String.fromCharCode(68 + idx);
+      const pairsForCol = state.exercisePairs.filter(p => p.targetColKey === col.key);
+      const hasPair = pairsForCol.length > 0;
+
       headerRow += `
-        <th class="excel-col-header px-3 py-2 min-w-[180px] ${isTarget ? 'bg-emerald-50 border-emerald-300' : ''}">
+        <th class="excel-col-header px-3 py-2 min-w-[200px] ${hasPair ? 'bg-emerald-50/80 border-emerald-300' : ''}">
           <div class="flex items-center justify-between gap-1 text-[11px] text-gray-500 font-mono mb-1">
             <span>Cột ${colLetter}</span>
             <button onclick="App.deleteCol('${col.id}')" class="text-gray-400 hover:text-red-500 p-0.5 rounded" title="Xóa cột này">
               <i data-lucide="x" class="w-3.5 h-3.5"></i>
             </button>
           </div>
-          <div class="flex items-center gap-1.5">
+          <div class="flex items-center gap-1.5 mb-1.5">
             <input type="text" value="${escapeHtml(col.title)}" onblur="App.renameCol('${col.id}', this.value)" placeholder="Tên cột (để trống nếu muốn)" class="w-full text-xs font-bold text-gray-800 bg-white border border-gray-200 px-2 py-1 rounded focus:border-emerald-500 outline-none">
           </div>
-          <div class="mt-1 flex items-center justify-between">
-            ${isTarget 
-              ? `<span class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full"><i data-lucide="check-circle" class="w-3 h-3"></i> Đáp án chuẩn</span>`
-              : `<button onclick="App.setAsTargetCol('${col.key}')" class="text-[10px] text-gray-500 hover:text-emerald-700 underline font-medium">Đặt làm đáp án</button>`
+          <div class="flex flex-wrap items-center justify-between gap-1">
+            ${hasPair 
+              ? `<span class="target-header-badge bg-emerald-100 text-emerald-800 border border-emerald-300">
+                   <i data-lucide="check" class="w-3 h-3"></i> Có ${pairsForCol.length} bài tập
+                 </span>
+                 <button onclick="App.removeExercisePairForCol('${col.key}')" class="text-[10px] text-red-500 hover:underline">Hủy bài tập</button>`
+              : `<button onclick="App.addExercisePairForCol('${col.key}')" class="text-[11px] bg-white hover:bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded border border-emerald-300 transition-colors flex items-center gap-1 shadow-2xs">
+                   <i data-lucide="plus-circle" class="w-3 h-3"></i> Tạo ô làm bài
+                 </button>`
             }
           </div>
         </th>
@@ -336,10 +343,10 @@ const App = (function () {
 
       state.columns.forEach(col => {
         const val = row[col.key] || '';
-        const isTarget = col.key === state.targetColKey;
+        const hasPair = state.exercisePairs.some(p => p.targetColKey === col.key);
         bodyHtml += `
-          <td class="px-0 py-0 ${isTarget ? 'bg-emerald-50/30' : ''}">
-            <input type="text" value="${escapeHtml(val)}" onblur="App.updateCell(${row.id}, '${col.key}', this.value)" class="excel-cell-input ${isTarget ? 'font-semibold text-emerald-950' : ''}">
+          <td class="px-0 py-0 ${hasPair ? 'bg-emerald-50/20' : ''}">
+            <input type="text" value="${escapeHtml(val)}" onblur="App.updateCell(${row.id}, '${col.key}', this.value)" class="excel-cell-input ${hasPair ? 'font-medium text-emerald-950' : ''}">
           </td>
         `;
       });
@@ -368,6 +375,7 @@ const App = (function () {
     const col = state.columns.find(c => c.id === colId);
     if (col) {
       col.title = newTitle.trim();
+      renderStatsHeader();
     }
   }
 
@@ -379,8 +387,8 @@ const App = (function () {
     if (confirm('Bạn có chắc chắn muốn xóa cột này?')) {
       const colToRemove = state.columns.find(c => c.id === colId);
       state.columns = state.columns.filter(c => c.id !== colId);
-      if (colToRemove && colToRemove.key === state.targetColKey) {
-        state.targetColKey = state.columns[0]?.key || null;
+      if (colToRemove) {
+        state.exercisePairs = state.exercisePairs.filter(p => p.targetColKey !== colToRemove.key);
       }
       renderAll();
     }
@@ -392,8 +400,7 @@ const App = (function () {
     state.columns.push({
       id: `col_${Date.now()}`,
       key: newKey,
-      title: `Cột ${newIdx + 1}`,
-      isTarget: false
+      title: `Cột ${newIdx + 1}`
     });
     state.rows.forEach(r => {
       r[newKey] = '';
@@ -449,7 +456,6 @@ const App = (function () {
     }
   }
 
-  // TRỘN HÀNG NGANG (Fisher-Yates) - KHÔNG ĐẢO CỘT DỌC
   function shuffleRows() {
     const arr = [...state.rows];
     for (let i = arr.length - 1; i > 0; i--) {
@@ -467,38 +473,22 @@ const App = (function () {
     }
   }
 
-  function setAsTargetCol(colKey) {
-    state.targetColKey = colKey;
-    state.columns.forEach(c => {
-      c.isTarget = c.key === colKey;
-    });
+  function addExercisePairForCol(colKey) {
+    const col = state.columns.find(c => c.key === colKey);
+    if (!col) return;
+    const newPair = {
+      id: `pair_${Date.now()}`,
+      targetColKey: colKey,
+      inputTitle: `Ô Làm Bài [${col.title}]`,
+      resultTitle: `Kết Quả [${col.title}]`
+    };
+    state.exercisePairs.push(newPair);
     renderAll();
   }
 
-  function openTargetColModal() {
-    const modal = document.getElementById('targetColModal');
-    const select = document.getElementById('targetColSelect');
-    if (!modal || !select) return;
-
-    select.innerHTML = state.columns.map((c, i) => `
-      <option value="${c.key}" ${c.key === state.targetColKey ? 'selected' : ''}>
-        Cột ${String.fromCharCode(68 + i)}: ${escapeHtml(c.title || 'Dữ liệu')}
-      </option>
-    `).join('');
-
-    modal.classList.remove('hidden');
-  }
-
-  function closeTargetColModal() {
-    document.getElementById('targetColModal')?.classList.add('hidden');
-  }
-
-  function confirmTargetCol() {
-    const select = document.getElementById('targetColSelect');
-    if (select && select.value) {
-      setAsTargetCol(select.value);
-      closeTargetColModal();
-    }
+  function removeExercisePairForCol(colKey) {
+    state.exercisePairs = state.exercisePairs.filter(p => p.targetColKey !== colKey);
+    renderAll();
   }
 
   function handleSearch(e) {
@@ -514,25 +504,24 @@ const App = (function () {
     if (window.lucide) window.lucide.createIcons();
   }
 
-  // ==========================================
-  // SHEET 2: LÀM TEST THỬ TRƯỚC KHI XUẤT FILE
-  // ==========================================
+  // SHEET 2: TEST THỬ (KHÔNG GIẬT LAG, KHÔNG NHẢY CHỮ)
   function renderTestSheet() {
     const container = document.getElementById('testSheetContainer');
     if (!container) return;
 
-    const targetCol = state.columns.find(c => c.key === state.targetColKey);
-    if (!targetCol) {
-      container.innerHTML = `<div class="p-8 text-center text-amber-600 bg-amber-50 rounded-xl border border-amber-200">Vui lòng chỉ định cột Đáp án chuẩn trước khi làm test thử.</div>`;
+    if (state.exercisePairs.length === 0) {
+      container.innerHTML = `
+        <div class="p-8 text-center text-amber-700 bg-amber-50 rounded-xl border border-amber-200">
+          <p class="font-bold text-sm mb-1">Chưa có bài tập nào được tạo!</p>
+          <p class="text-xs">Vui lòng quay lại Sheet 1 và bấm <strong>[+ Tạo ô làm bài]</strong> trên cột bạn muốn học sinh nhập đáp án.</p>
+        </div>
+      `;
+      renderTestKpis();
       return;
     }
 
-    let correctCount = 0;
-    let answeredCount = 0;
-    const totalCount = state.rows.length;
-
     let tableHtml = `
-      <div class="overflow-x-auto bg-white border border-gray-200 rounded-xl shadow-sm">
+      <div class="overflow-x-auto bg-white border border-gray-200 rounded-xl shadow-xs">
         <table class="excel-grid">
           <thead>
             <tr>
@@ -541,108 +530,210 @@ const App = (function () {
     `;
 
     state.columns.forEach(col => {
-      const isTarget = col.key === state.targetColKey;
       tableHtml += `
-        <th class="excel-col-header px-4 py-2 min-w-[160px] ${isTarget ? 'bg-emerald-50 text-emerald-800' : ''}">
+        <th class="excel-col-header px-4 py-2 min-w-[160px] bg-slate-50">
           ${escapeHtml(col.title)}
-          ${isTarget ? ' (Đáp án ẩn)' : ''}
         </th>
       `;
+
+      const pairsForCol = state.exercisePairs.filter(p => p.targetColKey === col.key);
+      pairsForCol.forEach(pair => {
+        tableHtml += `
+          <th class="excel-col-header px-4 py-2 min-w-[180px] bg-yellow-50 text-yellow-900 font-bold border-l-2 border-yellow-400">
+            ${escapeHtml(pair.inputTitle)}
+          </th>
+          <th class="excel-col-header px-4 py-2 w-28 text-center bg-gray-100">
+            ${escapeHtml(pair.resultTitle)}
+          </th>
+        `;
+      });
     });
 
     tableHtml += `
-              <th class="excel-col-header px-4 py-2 min-w-[200px] bg-yellow-50 text-yellow-800 font-bold border-l-2 border-yellow-400">
-                Ô Làm Bài (Gõ Đáp Án)
-              </th>
-              <th class="excel-col-header px-4 py-2 w-28 text-center bg-gray-100">
-                Kết Quả Chấm
-              </th>
             </tr>
           </thead>
           <tbody>
     `;
 
-    state.rows.forEach((row, idx) => {
-      const userVal = (state.testInputs[row.id] || '').trim();
-      const targetVal = String(row[targetCol.key] || '').trim();
-      const isFilled = userVal.length > 0;
-      if (isFilled) answeredCount++;
-
-      const acceptedAnswers = targetVal.split('|').map(s => s.trim().toLowerCase());
-      const isCorrect = acceptedAnswers.includes(userVal.toLowerCase());
-      if (isCorrect) correctCount++;
-
-      let resultBadge = `<span class="text-xs text-gray-400">-</span>`;
-      let inputBorderClass = 'border-gray-200';
-
-      if (isFilled) {
-        if (isCorrect) {
-          resultBadge = `<span class="inline-flex items-center gap-1 text-emerald-700 font-bold text-xs"><i data-lucide="check" class="w-3.5 h-3.5"></i> ĐÚNG</span>`;
-          inputBorderClass = 'bg-emerald-50/50 border-emerald-400 text-emerald-900';
-        } else {
-          resultBadge = `<span class="inline-flex items-center gap-1 text-red-600 font-bold text-xs"><i data-lucide="x" class="w-3.5 h-3.5"></i> SAI</span>`;
-          inputBorderClass = 'bg-red-50/50 border-red-300 text-red-900';
-        }
-      }
-
+    state.rows.forEach((row, rIdx) => {
       tableHtml += `
-        <tr class="hover:bg-slate-50 transition-colors">
-          <td class="excel-row-header text-center">${idx + 1}</td>
+        <tr class="hover:bg-slate-50 transition-colors" data-row-id="${row.id}">
+          <td class="excel-row-header text-center">${rIdx + 1}</td>
           <td class="px-3 py-2 font-mono text-xs text-slate-500 text-center font-bold bg-slate-50/40">
-            ${escapeHtml(row.code || `ID-${String(idx + 1).padStart(3, '0')}`)}
+            ${escapeHtml(row.code || `ID-${String(rIdx + 1).padStart(3, '0')}`)}
           </td>
       `;
 
       state.columns.forEach(col => {
         const val = row[col.key] || '';
-        const isTarget = col.key === state.targetColKey;
         tableHtml += `
-          <td class="px-3 py-2 text-sm text-gray-800 ${isTarget ? 'bg-emerald-50/20 font-medium' : ''}">
+          <td class="px-3 py-2 text-sm text-gray-800">
             <div class="flex items-center justify-between gap-1">
               <span>${escapeHtml(val)}</span>
               ${val ? `<button onclick="App.speakText('${escapeHtml(val)}')" class="text-gray-300 hover:text-emerald-600 p-0.5" title="Nghe phát âm"><i data-lucide="volume-2" class="w-3.5 h-3.5"></i></button>` : ''}
             </div>
           </td>
         `;
+
+        const pairsForCol = state.exercisePairs.filter(p => p.targetColKey === col.key);
+        pairsForCol.forEach(pair => {
+          const inputKey = `${pair.id}_${row.id}`;
+          const currentVal = state.testInputs[inputKey] || '';
+          const targetVal = String(row[pair.targetColKey] || '').trim();
+
+          let resultText = '-';
+          let resultClass = '';
+          if (currentVal.trim().length > 0) {
+            const accepted = targetVal.split('|').map(s => s.trim().toLowerCase());
+            const isOk = accepted.includes(currentVal.trim().toLowerCase());
+            resultText = isOk ? '✓ ĐÚNG' : '✗ SAI';
+            resultClass = isOk ? 'cell-result-correct' : 'cell-result-wrong';
+          }
+
+          tableHtml += `
+            <td class="px-2 py-1 cell-student-input border-l-2 border-yellow-300">
+              <input type="text" 
+                     value="${escapeHtml(currentVal)}" 
+                     data-pair-id="${pair.id}" 
+                     data-row-id="${row.id}" 
+                     data-row-idx="${rIdx}" 
+                     class="test-cell-input w-full text-sm px-2.5 py-1 rounded bg-white border border-gray-300 outline-none focus:ring-1 focus:ring-yellow-500 font-semibold text-gray-900"
+                     placeholder="Gõ đáp án...">
+            </td>
+            <td id="res_${pair.id}_${row.id}" class="px-3 py-2 text-center text-xs font-bold ${resultClass}">
+              ${resultText}
+            </td>
+          `;
+        });
       });
 
-      tableHtml += `
-          <td class="px-2 py-1 cell-student-input border-l-2 border-yellow-300">
-            <input type="text" value="${escapeHtml(state.testInputs[row.id] || '')}" oninput="App.handleTestInput(${row.id}, this.value)" placeholder="Gõ từ vựng / pinyin / hán tự..." class="w-full text-sm px-3 py-1.5 rounded bg-white border ${inputBorderClass} outline-none focus:ring-1 focus:ring-yellow-500 font-semibold text-gray-900">
-          </td>
-          <td class="px-3 py-2 text-center ${isFilled ? (isCorrect ? 'cell-result-correct' : 'cell-result-wrong') : ''}">
-            ${resultBadge}
-          </td>
-        </tr>
-      `;
+      tableHtml += `</tr>`;
     });
 
     tableHtml += `</tbody></table></div>`;
     container.innerHTML = tableHtml;
 
-    const scoreVal = totalCount > 0 ? ((correctCount / totalCount) * 10).toFixed(1) : 0;
-    const progressPct = totalCount > 0 ? Math.round((answeredCount / totalCount) * 100) : 0;
-
-    document.getElementById('testKpiTotal').textContent = totalCount;
-    document.getElementById('testKpiDone').textContent = answeredCount;
-    document.getElementById('testKpiCorrect').textContent = correctCount;
-    document.getElementById('testKpiWrong').textContent = answeredCount - correctCount;
-    document.getElementById('testKpiScore').textContent = scoreVal;
-    document.getElementById('testKpiProgress').textContent = `${progressPct}%`;
-
-    if (totalCount > 0 && correctCount === totalCount && answeredCount === totalCount) {
-      playSound('celebrate');
-      if (typeof confetti === 'function') {
-        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-      }
-    }
-
+    bindTestInputListeners();
+    renderTestKpis();
     if (window.lucide) window.lucide.createIcons();
   }
 
-  function handleTestInput(rowId, val) {
-    state.testInputs[rowId] = val;
-    renderTestSheet();
+  // LẮNG NGHE SỰ KIỆN GÕ & CHUYỂN DÒNG (ENTER / ARROW KEYS)
+  function bindTestInputListeners() {
+    const inputs = document.querySelectorAll('.test-cell-input');
+    inputs.forEach(input => {
+      input.addEventListener('input', (e) => {
+        const pairId = e.target.dataset.pairId;
+        const rowId = e.target.dataset.rowId;
+        const val = e.target.value;
+        onTestCellType(pairId, rowId, val);
+      });
+
+      input.addEventListener('keydown', (e) => {
+        const pairId = e.target.dataset.pairId;
+        const curIdx = parseInt(e.target.dataset.rowIdx, 10);
+
+        if (e.key === 'Enter' || e.key === 'ArrowDown') {
+          e.preventDefault();
+          const nextIdx = curIdx + 1;
+          const nextEl = document.querySelector(`.test-cell-input[data-pair-id="${pairId}"][data-row-idx="${nextIdx}"]`);
+          if (nextEl) {
+            nextEl.focus();
+            nextEl.select();
+          }
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          const prevIdx = curIdx - 1;
+          const prevEl = document.querySelector(`.test-cell-input[data-pair-id="${pairId}"][data-row-idx="${prevIdx}"]`);
+          if (prevEl) {
+            prevEl.focus();
+            prevEl.select();
+          }
+        }
+      });
+    });
+  }
+
+  // CẬP NHẬT CỤC BỘ KHÔNG RE-RENDER
+  function onTestCellType(pairId, rowId, val) {
+    const inputKey = `${pairId}_${rowId}`;
+    state.testInputs[inputKey] = val;
+
+    const row = state.rows.find(r => String(r.id) === String(rowId));
+    const pair = state.exercisePairs.find(p => p.id === pairId);
+    if (!row || !pair) return;
+
+    const targetVal = String(row[pair.targetColKey] || '').trim();
+    const resEl = document.getElementById(`res_${pairId}_${rowId}`);
+    if (!resEl) return;
+
+    if (!val || val.trim().length === 0) {
+      resEl.textContent = '-';
+      resEl.className = 'px-3 py-2 text-center text-xs font-bold';
+    } else {
+      const accepted = targetVal.split('|').map(s => s.trim().toLowerCase());
+      const isOk = accepted.includes(val.trim().toLowerCase());
+
+      resEl.textContent = isOk ? '✓ ĐÚNG' : '✗ SAI';
+      resEl.className = `px-3 py-2 text-center text-xs font-bold ${isOk ? 'cell-result-correct' : 'cell-result-wrong'}`;
+    }
+
+    renderTestKpis();
+  }
+
+  function renderTestKpis() {
+    const container = document.getElementById('testKpiCardsContainer');
+    if (!container) return;
+
+    const totalQuestions = state.rows.length;
+    let totalScoreSum = 0;
+    let cardHtml = '';
+
+    cardHtml += `
+      <div class="kpi-card p-3 text-center">
+        <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Tổng Số Câu</span>
+        <span class="text-2xl font-black text-gray-900 font-mono">${totalQuestions}</span>
+      </div>
+    `;
+
+    state.exercisePairs.forEach((pair, idx) => {
+      let correct = 0;
+      let done = 0;
+
+      state.rows.forEach(r => {
+        const val = (state.testInputs[`${pair.id}_${r.id}`] || '').trim();
+        const targetVal = String(r[pair.targetColKey] || '').trim();
+        if (val.length > 0) {
+          done++;
+          const accepted = targetVal.split('|').map(s => s.trim().toLowerCase());
+          if (accepted.includes(val.toLowerCase())) correct++;
+        }
+      });
+
+      const score = totalQuestions > 0 ? ((correct / totalQuestions) * 10).toFixed(1) : 0;
+      totalScoreSum += parseFloat(score);
+
+      const targetCol = state.columns.find(c => c.key === pair.targetColKey);
+      const label = targetCol ? targetCol.title : `Bài ${idx + 1}`;
+
+      cardHtml += `
+        <div class="kpi-card p-3 text-center bg-yellow-50/50 border-yellow-200">
+          <span class="text-[10px] font-bold text-amber-800 uppercase tracking-wider block mb-1 truncate" title="Điểm [${label}]">Điểm [${escapeHtml(label)}]</span>
+          <span class="text-2xl font-black text-amber-900 font-mono">${score}</span>
+          <span class="text-[10px] text-gray-500 block">Đúng ${correct}/${totalQuestions}</span>
+        </div>
+      `;
+    });
+
+    const avgScore = state.exercisePairs.length > 0 ? (totalScoreSum / state.exercisePairs.length).toFixed(1) : 0;
+    cardHtml += `
+      <div class="kpi-card p-3 text-center bg-emerald-50/60 border-emerald-300">
+        <span class="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block mb-1">Điểm Tổng (10)</span>
+        <span class="text-2xl font-black text-emerald-700 font-mono">${avgScore}</span>
+      </div>
+    `;
+
+    container.innerHTML = cardHtml;
   }
 
   function resetTestInputs() {
@@ -650,9 +741,7 @@ const App = (function () {
     renderTestSheet();
   }
 
-  // ==========================================
-  // PARSER MODAL (QUÉT DỮ LIỆU)
-  // ==========================================
+  // IMPORT MODAL
   function openImportModal() {
     const modal = document.getElementById('importModal');
     if (modal) modal.classList.remove('hidden');
@@ -723,13 +812,19 @@ const App = (function () {
       newColumns.push({
         id: `col_${Date.now()}_${c}`,
         key: `col_${c}`,
-        title: title || `Cột ${c + 1}`,
-        isTarget: c === 0
+        title: title || `Cột ${c + 1}`
       });
     }
 
     state.columns = newColumns;
-    state.targetColKey = newColumns[0]?.key;
+    state.exercisePairs = [
+      {
+        id: `pair_${Date.now()}`,
+        targetColKey: newColumns[0].key,
+        inputTitle: `Ô Làm Bài [${newColumns[0].title}]`,
+        resultTitle: `Kết Quả [${newColumns[0].title}]`
+      }
+    ];
 
     state.rows = parsedMatrix.map((rowArr, idx) => {
       const code = `ID-${String(idx + 1).padStart(3, '0')}`;
@@ -748,17 +843,14 @@ const App = (function () {
     renderAll();
   }
 
-  // ==========================================
-  // XUẤT FILE EXCEL (.XLSX)
-  // ==========================================
+  // EXPORT EXCEL
   function openExportModal() {
     const modal = document.getElementById('exportModal');
     if (modal) modal.classList.remove('hidden');
 
-    const targetCol = state.columns.find(c => c.key === state.targetColKey);
-    const badge = document.getElementById('exportTargetColInfo');
-    if (badge && targetCol) {
-      badge.textContent = `Đáp án đối chiếu: [${targetCol.title}]`;
+    const badge = document.getElementById('exportTargetInfo');
+    if (badge) {
+      badge.textContent = `Đang có ${state.exercisePairs.length} bài tập được tích hợp trong file`;
     }
   }
 
@@ -778,6 +870,7 @@ const App = (function () {
       const author = document.getElementById('exportAuthor')?.value || 'Biên soạn bởi: Vocab Studio Pro • Hotline/Zalo: 09xx.xxx.xxx';
       const themeKey = document.getElementById('exportTheme')?.value || 'excelGreen';
       const protectSheet = document.getElementById('exportProtect')?.checked ?? true;
+      const hideTargetColumns = document.getElementById('exportHideAnswers')?.checked ?? false;
       const password = document.getElementById('exportPassword')?.value || '';
 
       const result = await ExcelEngine.generateWorkbook({
@@ -785,15 +878,16 @@ const App = (function () {
         subtitle,
         author,
         themeKey,
-        targetColKey: state.targetColKey,
+        exercisePairs: state.exercisePairs,
         protectSheet,
+        hideTargetColumns,
         password,
         columns: state.columns,
         rows: state.rows
       });
 
       closeExportModal();
-      alert(`🎉 Đã xuất file Excel thành công: "${result.fileName}" (${result.totalQuestions} câu)!\nFile mở tốt 100% trên Excel, WPS Office và Google Sheets.`);
+      alert(`🎉 Đã xuất file Excel thành công: "${result.fileName}" (${result.totalQuestions} câu, ${result.pairCount} bài tập)!\nFile mở tốt 100% trên Excel, WPS Office và Google Sheets.`);
     } catch (err) {
       alert('Lỗi xuất file: ' + err.message);
     } finally {
@@ -829,11 +923,8 @@ const App = (function () {
     deleteSelectedRows,
     shuffleRows,
     resetRows,
-    setAsTargetCol,
-    openTargetColModal,
-    closeTargetColModal,
-    confirmTargetCol,
-    handleTestInput,
+    addExercisePairForCol,
+    removeExercisePairForCol,
     resetTestInputs,
     openImportModal,
     closeImportModal,
