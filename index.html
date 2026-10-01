@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vocab Studio Pro - Trình Tạo Đề & Luyện Từ Vựng Excel Tương Tác</title>
+  
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              900: '#1e3a8a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- ExcelJS CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+
+  <!-- Canvas Confetti CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-blue-600 selection:text-white">
+
+  <!-- ========================================================================= -->
+  <!-- 1. TOP NAVIGATION & HERO BAR                                              -->
+  <!-- ========================================================================= -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      
+      <!-- Brand & Title -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-emerald-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
+          <i data-lucide="sheet" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold text-base tracking-tight text-white">VOCAB STUDIO <span class="text-blue-400">PRO</span></span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">V2.0 EXCEL ENGINE</span>
+          </div>
+          <p class="text-xs text-slate-400 hidden sm:block">Trình tạo đề bài tập Excel tự động chấm điểm • Không cần Macro/VBA</p>
+        </div>
+      </div>
+
+      <!-- Quick Dataset Samples & Language Dropdown -->
+      <div class="flex items-center gap-2">
+        <!-- Sample Dataset Dropdown -->
+        <div class="hidden lg:flex items-center gap-1.5 bg-slate-800/80 border border-slate-700/60 p-1 rounded-lg text-xs">
+          <span class="text-slate-400 px-2 font-medium">Mẫu có sẵn:</span>
+          <button data-sample-key="hsk" class="px-2.5 py-1 rounded bg-slate-700/60 hover:bg-slate-700 text-slate-200 hover:text-white transition-colors">HSK 3</button>
+          <button data-sample-key="ielts" class="px-2.5 py-1 rounded bg-slate-700/60 hover:bg-slate-700 text-slate-200 hover:text-white transition-colors">IELTS C1</button>
+          <button data-sample-key="jp" class="px-2.5 py-1 rounded bg-slate-700/60 hover:bg-slate-700 text-slate-200 hover:text-white transition-colors">JLPT N4</button>
+          <button data-sample-key="kr" class="px-2.5 py-1 rounded bg-slate-700/60 hover:bg-slate-700 text-slate-200 hover:text-white transition-colors">Topik I</button>
+        </div>
+
+        <!-- TTS Language Selector -->
+        <div class="flex items-center gap-1 bg-slate-800/80 border border-slate-700/60 px-2.5 py-1.5 rounded-lg text-xs">
+          <i data-lucide="volume-2" class="w-3.5 h-3.5 text-blue-400"></i>
+          <select id="langSelect" class="bg-transparent text-slate-300 focus:outline-none cursor-pointer">
+            <option value="auto">Giọng: Tự động phát hiện</option>
+            <option value="zh-CN">Tiếng Trung (zh-CN 普通话)</option>
+            <option value="en-US">Tiếng Anh (en-US American)</option>
+            <option value="ja-JP">Tiếng Nhật (ja-JP 日本語)</option>
+            <option value="ko-KR">Tiếng Hàn (ko-KR 한국어)</option>
+            <option value="vi-VN">Tiếng Việt (vi-VN)</option>
+          </select>
+        </div>
+
+        <!-- Primary Export CTA -->
+        <button id="btnOpenExportModal" class="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs sm:text-sm px-4 py-2 rounded-xl shadow-lg shadow-emerald-600/30 transition-all hover:scale-[1.02] active:scale-[0.98]">
+          <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+          <span>Xuất File Excel (.xlsx)</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========================================================================= -->
+  <!-- 2. TAB CONTROLS & STATS BAR                                               -->
+  <!-- ========================================================================= -->
+  <div class="border-b border-slate-800 bg-slate-900/50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-center justify-between gap-4 py-2.5">
+      
+      <!-- Tab Buttons -->
+      <nav class="flex items-center gap-1 sm:gap-2">
+        <button data-tab-target="editor" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold border transition-all text-blue-400 border-blue-500 bg-blue-500/10">
+          <i data-lucide="table" class="w-4 h-4"></i>
+          <span>1. Bảng Tính & Biên Tập</span>
+        </button>
+        <button data-tab-target="live" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold border transition-all text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-800/60">
+          <i data-lucide="edit-3" class="w-4 h-4"></i>
+          <span>2. Bảng Tính Live</span>
+        </button>
+        <button data-tab-target="flashcard" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold border transition-all text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-800/60">
+          <i data-lucide="layers" class="w-4 h-4"></i>
+          <span>3. Flashcard 3D</span>
+        </button>
+        <button data-tab-target="quiz" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold border transition-all text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-800/60">
+          <i data-lucide="help-circle" class="w-4 h-4"></i>
+          <span>4. Trắc Nghiệm 4 Đáp Án</span>
+        </button>
+      </nav>
+
+      <!-- Stats Quick Badges & File Actions -->
+      <div class="flex items-center gap-3 text-xs">
+        <div class="flex items-center gap-2 bg-slate-800/60 border border-slate-700/50 px-3 py-1 rounded-lg">
+          <span class="text-slate-400">Tổng từ vựng:</span>
+          <span id="statTotalQuestions" class="font-bold text-white font-mono">0</span>
+        </div>
+        <div id="statStatusBadge"></div>
+
+        <button id="btnOpenImportModal" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition-colors font-medium">
+          <i data-lucide="upload" class="w-3.5 h-3.5 text-blue-400"></i>
+          <span>Nạp Dữ Liệu</span>
+        </button>
+
+        <label class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition-colors font-medium cursor-pointer" title="Nạp ngược file Excel .xlsx đã xuất trước đó">
+          <i data-lucide="file-up" class="w-3.5 h-3.5 text-emerald-400"></i>
+          <span>Nạp Ngược .xlsx</span>
+          <input type="file" id="fileUploadInput" accept=".xlsx,.csv,.tsv,.txt" class="hidden">
+        </label>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 3. MAIN CONTENT CONTAINER                                                 -->
+  <!-- ========================================================================= -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- ===================================================================== -->
+    <!-- TAB 1: SPREADSHEET EDITOR                                             -->
+    <!-- ===================================================================== -->
+    <div id="tabView_editor" class="tab-view space-y-4">
+      
+      <!-- Toolbar Controls -->
+      <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 border border-slate-800 p-3 rounded-xl">
+        <div class="flex items-center gap-2 flex-1 max-w-md">
+          <div class="relative w-full">
+            <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+            <input type="text" id="searchInput" placeholder="Tìm kiếm từ vựng, nghĩa, ghi chú..." class="w-full bg-slate-800/80 border border-slate-700 pl-9 pr-3 py-1.5 rounded-lg text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500">
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="btnAddRow" class="flex items-center gap-1.5 bg-blue-600/80 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            <span>Thêm Dòng</span>
+          </button>
+          <button id="btnAddColumn" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700 transition-colors">
+            <i data-lucide="columns" class="w-3.5 h-3.5 text-blue-400"></i>
+            <span>Thêm Cột</span>
+          </button>
+          <button id="btnShuffleRows" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700 transition-colors" title="Trộn thứ tự các câu hỏi">
+            <i data-lucide="shuffle" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span>Trộn Đề</span>
+          </button>
+          <button id="btnResetRows" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700 transition-colors" title="Khôi phục thứ tự gốc">
+            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 text-slate-400"></i>
+            <span>Thứ Tự Gốc</span>
+          </button>
+          <button id="btnPickRandom" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700 transition-colors" title="Lấy ngẫu nhiên N câu">
+            <i data-lucide="dice-5" class="w-3.5 h-3.5 text-purple-400"></i>
+            <span>Lấy N Câu</span>
+          </button>
+          <button id="btnDeleteSelectedRows" class="flex items-center gap-1.5 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/40 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors" title="Xóa các dòng đã tích chọn">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5 text-rose-400"></i>
+            <span>Xóa Đã Chọn</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Instruction Hint Card -->
+      <div class="bg-blue-950/30 border border-blue-900/40 rounded-xl p-3 flex items-start gap-3 text-xs text-blue-200">
+        <i data-lucide="info" class="w-4 h-4 text-blue-400 shrink-0 mt-0.5"></i>
+        <div>
+          <span class="font-bold">Mẹo tạo file Excel thương mại:</span> 
+          Mỗi cột có một vai trò chuyên biệt (chọn trong dropdown màu sắc trên Header): 
+          <span class="text-blue-300 font-semibold">[Đề bài]</span> là câu hỏi; 
+          <span class="text-emerald-300 font-semibold">[Đáp án chuẩn]</span> là từ học sinh phải gõ (hỗ trợ nhiều đáp án cách nhau bằng dấu <code class="bg-slate-800 px-1 rounded">|</code> ví dụ: <code class="bg-slate-800 px-1 rounded">rich|wealthy</code>); 
+          <span class="text-amber-300 font-semibold">[Ô che mở khóa]</span> sẽ tự bung ra khi học sinh gõ đúng; 
+          và <span class="text-purple-300 font-semibold">[Pinyin / Phiên âm]</span> hỗ trợ đọc phát âm.
+        </div>
+      </div>
+
+      <!-- Main Spreadsheet Grid -->
+      <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/60 shadow-2xl">
+        <table class="spreadsheet-table">
+          <thead id="tableHeader"></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 2: LIVE SPREADSHEET PRACTICE                                      -->
+    <!-- ===================================================================== -->
+    <div id="tabView_live" class="tab-view hidden space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-4 bg-slate-900/90 border border-slate-800 p-4 rounded-xl">
+        <div>
+          <h2 class="text-base font-bold text-white flex items-center gap-2">
+            <i data-lucide="activity" class="w-5 h-5 text-emerald-400"></i>
+            <span>Bảng Tính Tương Tác Trực Tiếp (Live Practice)</span>
+          </h2>
+          <p id="liveStatsSummary" class="text-xs text-slate-400 mt-0.5">Luyện gõ từ vựng trực tiếp trên giao diện tương tự file Excel</p>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2 bg-slate-800 px-3.5 py-1.5 rounded-xl border border-slate-700">
+            <span class="text-xs text-slate-400 uppercase font-semibold">Điểm số</span>
+            <span id="liveScoreValue" class="text-lg font-black text-emerald-400 font-mono">0.0</span>
+            <span class="text-xs text-slate-500">/ 10</span>
+          </div>
+
+          <button id="btnToggleLiveMode" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3.5 py-2 rounded-xl text-xs font-semibold border border-slate-700 transition-colors">
+            Chuyển sang Chế độ Kiểm tra
+          </button>
+          
+          <button id="btnSubmitLiveExam" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-lg shadow-emerald-600/30 transition-all">
+            Nộp Bài Chấm Điểm
+          </button>
+
+          <button id="btnResetLiveExam" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-xl text-xs font-medium border border-slate-700 transition-colors" title="Xóa toàn bộ câu trả lời">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <div id="livePracticeContainer"></div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 3: 3D FLASHCARDS                                                  -->
+    <!-- ===================================================================== -->
+    <div id="tabView_flashcard" class="tab-view hidden space-y-6">
+      <div class="flex items-center justify-between max-w-xl mx-auto">
+        <div class="text-xs text-slate-400">
+          <span id="flashcardProgress" class="font-bold text-white font-mono text-sm">Thẻ 1 / 1</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btnShuffleFlashcard" class="flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700 transition-colors">
+            <i data-lucide="shuffle" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span>Trộn thẻ</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 3D Card Box -->
+      <div class="max-w-xl mx-auto perspective-1000">
+        <div id="flashcardContainer" class="w-full h-80 sm:h-96 relative cursor-pointer select-none">
+          <div id="flashcardInner" class="flashcard-inner w-full h-full transform-style-3d relative rounded-2xl shadow-2xl">
+            <!-- Mặt Trước -->
+            <div class="backface-hidden absolute inset-0 rounded-2xl p-8 flex flex-col justify-between bg-gradient-to-br from-slate-900 to-slate-800 border-2 border-slate-700/80 shadow-xl">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-blue-400 bg-blue-950/60 border border-blue-800/40 px-2.5 py-1 rounded-full">Mặt Trước (Câu Hỏi)</span>
+                <button id="btnFlashcardSpeak" class="w-9 h-9 rounded-full bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white flex items-center justify-center transition-colors shadow">
+                  <i data-lucide="volume-2" class="w-4 h-4"></i>
+                </button>
+              </div>
+
+              <div class="text-center my-auto space-y-3">
+                <div id="flashcardFrontQuestion" class="text-3xl sm:text-4xl font-extrabold text-white tracking-wide"></div>
+                <div id="flashcardFrontPinyin" class="text-lg text-slate-400 font-mono"></div>
+              </div>
+
+              <div class="text-center text-xs text-slate-500 font-medium flex items-center justify-center gap-1">
+                <i data-lucide="mouse-pointer" class="w-3.5 h-3.5"></i>
+                <span>Nhấp chuột hoặc nhấn phím [Space] để lật đáp án</span>
+              </div>
+            </div>
+
+            <!-- Mặt Sau -->
+            <div class="backface-hidden rotate-y-180 absolute inset-0 rounded-2xl p-8 flex flex-col justify-between bg-gradient-to-br from-slate-900 to-blue-950 border-2 border-blue-600/60 shadow-xl">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/60 border border-emerald-800/40 px-2.5 py-1 rounded-full">Mặt Sau (Đáp Án)</span>
+                <span class="text-xs text-slate-400 font-mono">Vocab Studio Pro</span>
+              </div>
+
+              <div class="text-center my-auto space-y-3">
+                <div id="flashcardBackAnswer" class="text-2xl sm:text-3xl font-extrabold text-emerald-300"></div>
+                <div id="flashcardBackMask" class="text-sm text-amber-300/90 font-medium"></div>
+                <div id="flashcardBackExtra" class="text-xs text-slate-300 italic max-w-md mx-auto line-clamp-3"></div>
+              </div>
+
+              <div class="text-center text-xs text-slate-400 font-medium flex items-center justify-center gap-1">
+                <span>Nhấp chuột để lật lại mặt trước</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls Bottom Bar -->
+      <div class="flex items-center justify-center gap-4 max-w-xl mx-auto">
+        <button id="btnPrevFlashcard" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs sm:text-sm px-5 py-2.5 rounded-xl border border-slate-700 transition-colors shadow-lg">
+          <i data-lucide="chevron-left" class="w-4 h-4"></i>
+          <span>Thẻ Trước (←)</span>
+        </button>
+        <button id="btnNextFlashcard" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs sm:text-sm px-6 py-2.5 rounded-xl shadow-lg shadow-blue-600/30 transition-all hover:scale-[1.02]">
+          <span>Thẻ Sau (→)</span>
+          <i data-lucide="chevron-right" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 4: 4-CHOICE REFLEX QUIZ                                           -->
+    <!-- ===================================================================== -->
+    <div id="tabView_quiz" class="tab-view hidden space-y-6">
+      <div id="quizContainer" class="max-w-2xl mx-auto">
+        <!-- Active Question Card -->
+        <div id="quizActiveCard" class="space-y-6">
+          <div class="flex items-center justify-between bg-slate-900 border border-slate-800 p-4 rounded-xl">
+            <span id="quizProgress" class="text-xs font-bold text-slate-400 font-mono">Câu 1 / 10</span>
+            <div class="flex items-center gap-3">
+              <span id="quizStreak" class="text-xs font-bold text-amber-400 animate-pulse"></span>
+              <div class="bg-slate-800 px-3 py-1 rounded-lg border border-slate-700 text-xs">
+                <span class="text-slate-400">Điểm:</span>
+                <span id="quizScore" class="font-bold text-white font-mono ml-1">0</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700/80 rounded-2xl p-6 sm:p-8 text-center space-y-3 shadow-xl">
+            <span class="text-xs uppercase tracking-widest text-blue-400 font-bold">Hãy chọn nghĩa đúng nhất của từ:</span>
+            <div id="quizQuestionText" class="text-3xl sm:text-4xl font-extrabold text-white"></div>
+          </div>
+
+          <!-- 4 Options Grid -->
+          <div id="quizOptionsContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-3.5"></div>
+
+          <div class="flex justify-end">
+            <button id="btnNextQuiz" class="hidden flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm px-6 py-2.5 rounded-xl shadow-lg shadow-blue-600/30 transition-all">
+              <span>Câu tiếp theo</span>
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Finished Card -->
+        <div id="quizFinishCard" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center space-y-6 shadow-2xl">
+          <div class="w-16 h-16 mx-auto rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
+            <i data-lucide="award" class="w-8 h-8"></i>
+          </div>
+          <div class="space-y-1">
+            <h3 class="text-2xl font-black text-white">Hoàn Thành Bài Trắc Nghiệm!</h3>
+            <p class="text-xs text-slate-400">Bạn đã hoàn thành toàn bộ câu hỏi trắc nghiệm phản xạ.</p>
+          </div>
+          <div class="inline-block bg-slate-800 border border-slate-700 px-6 py-3 rounded-2xl">
+            <span class="text-xs text-slate-400 block mb-0.5">Tổng điểm tích lũy:</span>
+            <span id="quizFinalScore" class="text-4xl font-black text-emerald-400 font-mono">0</span>
+          </div>
+          <div>
+            <button id="btnRestartQuiz" class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm px-6 py-2.5 rounded-xl shadow-lg transition-all">
+              Làm Lại Bài Trắc Nghiệm
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 1: UNIVERSAL MULTI-ENGINE PARSER STUDIO                             -->
+  <!-- ========================================================================= -->
+  <div id="importModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/90">
+        <div class="flex items-center gap-2">
+          <i data-lucide="sparkles" class="w-5 h-5 text-blue-400"></i>
+          <h3 class="font-bold text-base text-white">Universal Multi-Engine Parser Studio</h3>
+        </div>
+        <button id="btnCloseImportModal" class="text-slate-400 hover:text-white p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-4 overflow-y-auto flex-1">
+        <div>
+          <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+            Dán dữ liệu thô (Quizlet, Anki, Text, Từ điển, Excel copy...):
+          </label>
+          <textarea id="importTextarea" rows="6" placeholder="apple	/ˈæpl/	quả táo	Tôi thích ăn táo
+banana	/bəˈnænə/	quả chuối	Chuối chín vàng" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm font-mono text-slate-200 placeholder-slate-600 focus:outline-none focus:border-blue-500"></textarea>
+        </div>
+
+        <div class="bg-slate-950/60 border border-slate-800 p-3 rounded-xl space-y-2">
+          <span class="text-xs font-semibold text-slate-300 block">Ký tự phân cách (Tự động nhận diện hoặc chọn thủ công):</span>
+          <div class="flex flex-wrap items-center gap-3 text-xs text-slate-300">
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input type="radio" name="importDelimiter" value="&#9;" checked class="text-blue-500">
+              <span>Phím Tab (\t)</span>
+            </label>
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input type="radio" name="importDelimiter" value="," class="text-blue-500">
+              <span>Dấu phẩy CSV (,)</span>
+            </label>
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input type="radio" name="importDelimiter" value=";" class="text-blue-500">
+              <span>Chấm phẩy (;)</span>
+            </label>
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input type="radio" name="importDelimiter" value=" - " class="text-blue-500">
+              <span>Gạch ngang ( - )</span>
+            </label>
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input type="radio" name="importDelimiter" value=":" class="text-blue-500">
+              <span>Hai chấm (:)</span>
+            </label>
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input type="radio" name="importDelimiter" value="|" class="text-blue-500">
+              <span>Pipe (|)</span>
+            </label>
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input type="radio" name="importDelimiter" value="spaces" class="text-blue-500">
+              <span>Đa khoảng trắng</span>
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <div class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+            <span>Bảng xem trước & Gán vai trò cột:</span>
+            <span class="text-[11px] text-slate-400 font-normal">Thay đổi vai trò từng cột trước khi nạp</span>
+          </div>
+          <div id="importPreviewArea" class="border border-slate-800 rounded-xl bg-slate-950/40 p-2 min-h-[120px]"></div>
+        </div>
+      </div>
+
+      <div class="px-6 py-4 border-t border-slate-800 flex items-center justify-end gap-3 bg-slate-900/90">
+        <button onclick="App.closeImportModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition-colors">
+          Hủy Bỏ
+        </button>
+        <button id="btnConfirmImport" class="px-5 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/30 transition-all">
+          Xác Nhận Nạp Vào Bảng Tính
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 2: PROFESSIONAL EXCEL EXPORT SETTINGS                               -->
+  <!-- ========================================================================= -->
+  <div id="exportModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/90">
+        <div class="flex items-center gap-2">
+          <i data-lucide="file-spreadsheet" class="w-5 h-5 text-emerald-400"></i>
+          <div>
+            <h3 class="font-bold text-base text-white">Xuất File Excel Tương Tác (.xlsx)</h3>
+            <p class="text-xs text-slate-400">Tạo file bài tập thương mại không cần macro, sẵn sàng đóng gói bán cho học viên</p>
+          </div>
+        </div>
+        <button id="btnCloseExportModal" class="text-slate-400 hover:text-white p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
+        <div class="space-y-3">
+          <div>
+            <label class="block font-bold text-slate-300 uppercase tracking-wider mb-1">Tiêu đề bài kiểm tra (Hiển thị đầu file):</label>
+            <input type="text" id="exportTitle" value="BÀI TẬP TỰ ĐỘNG CHẤM ĐIỂM - TỪ VỰNG TIẾNG ANH / TRUNG" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 font-semibold">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Mô tả / Hướng dẫn học sinh:</label>
+            <input type="text" id="exportSubtitle" value="Nhập đáp án vào ô màu vàng • Nhấn Enter để chấm điểm • Mở khóa ô che khi gõ đúng" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Tên tác giả / Đóng dấu bản quyền (Watermark khi bán):</label>
+            <input type="text" id="exportAuthor" value="Biên soạn bởi: Vocab Studio Pro • Hotline/Zalo: 09xx.xxx.xxx" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Chế độ làm bài trên Excel:</label>
+            <select id="exportMode" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500">
+              <option value="exam" selected>Chế độ Kiểm tra (Chỉ chấm khi nộp bài - Khuyên dùng)</option>
+              <option value="practice">Chế độ Luyện tập (Chấm tức thì ngay khi gõ)</option>
+              <option value="hybrid">Chế độ Linh hoạt (Có ô dropdown chọn chế độ)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Màu sắc giao diện Excel:</label>
+            <select id="exportTheme" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500">
+              <option value="slate" selected>Chuyên nghiệp (Slate Navy - Sang trọng)</option>
+              <option value="emerald">Tươi sáng (Emerald Green - Trẻ trung)</option>
+              <option value="indigo">Hiện đại (Royal Indigo - Cao cấp)</option>
+              <option value="amber">Trang nhã (Warm Amber - Tinh tế)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="bg-slate-950/60 border border-slate-800 p-3.5 rounded-xl space-y-3">
+          <div class="font-bold text-slate-200 flex items-center gap-1.5">
+            <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
+            <span>Bảo vệ chống lộ công thức & phá vỡ đề bài:</span>
+          </div>
+
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="exportProtect" checked class="rounded border-slate-700 bg-slate-900 text-emerald-500">
+            <span class="text-slate-300">Khóa Sheet bảo vệ (Học sinh chỉ được phép nhập vào ô đáp án màu vàng)</span>
+          </label>
+
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="exportShowAnswers" checked class="rounded border-slate-700 bg-slate-900 text-emerald-500">
+            <span class="text-slate-300">Hiện cột "Đáp án chuẩn" sau khi Nộp bài (Tự mở khóa)</span>
+          </label>
+
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1">Mật khẩu khóa Sheet (Để trống nếu chỉ cần khóa thông thường):</label>
+            <input type="text" id="exportPassword" placeholder="Để trống nếu không đặt mật khẩu" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200">
+          </div>
+        </div>
+      </div>
+
+      <div class="px-6 py-4 border-t border-slate-800 flex items-center justify-end gap-3 bg-slate-900/90">
+        <button onclick="App.closeExportModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition-colors">
+          Hủy Bỏ
+        </button>
+        <button id="btnExecuteExport" class="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-600/30 transition-all">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          <span>Tạo & Tải File Excel (.xlsx) Ngay</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 4. FOOTER                                                                 -->
+  <!-- ========================================================================= -->
+  <footer class="border-t border-slate-900 bg-slate-950 py-6 mt-12 text-center text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <span class="font-bold text-slate-400">Vocab Studio Pro</span>
+        <span>•</span>
+        <span>Excel Interactive Learning Engine V2.0</span>
+      </div>
+      <div>
+        <span>100% Client-side • Không lưu dữ liệu trên server • Hoàn toàn bảo mật</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Application Scripts -->
+  <script src="excel-engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
