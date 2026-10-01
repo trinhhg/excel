@@ -1,6 +1,6 @@
 /* ==========================================================================
-   VOCAB STUDIO PRO - EXCEL LIGHT THEME & SPREADSHEET ENGINE
-   Giao diện chuẩn Excel Light Theme, lưới bảng tính sắc nét, bảng điểm chuyên nghiệp
+   VOCAB STUDIO PRO - EXCEL LIGHT THEME & MULTI-EXERCISE ENGINE (V2.2)
+   Lưới bảng tính chuẩn Excel, hỗ trợ nhiều cặp bài tập độc lập, không giật lag
    ========================================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
@@ -11,8 +11,8 @@
   --excel-green: #107c41;
   --excel-green-hover: #0b6a37;
   --excel-border: #d1d5db;
-  --excel-header-bg: #f3f4f6;
-  --excel-cell-border: #e5e7eb;
+  --excel-header-bg: #f8fafc;
+  --excel-cell-border: #e2e8f0;
 }
 
 body {
@@ -73,8 +73,8 @@ body {
   user-select: none;
   font-family: var(--font-mono);
   font-size: 11px;
-  width: 48px;
-  min-width: 48px;
+  width: 44px;
+  min-width: 44px;
 }
 
 /* Cell Input Inside Grid */
@@ -83,7 +83,7 @@ body {
   height: 100%;
   border: none;
   outline: none;
-  padding: 8px 12px;
+  padding: 7px 10px;
   background: transparent;
   color: #0f172a;
   font-family: inherit;
@@ -98,10 +98,6 @@ body {
 /* Highlight Selected Row/Col */
 .excel-row-selected td {
   background-color: #eff6ff !important;
-}
-
-.excel-col-selected {
-  background-color: #dbeafe !important;
 }
 
 /* Role Specific Cell Styles */
@@ -132,7 +128,7 @@ body {
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: all 0.2s ease;
 }
 
@@ -204,4 +200,15 @@ body {
   background: #ffffff;
   color: #107c41;
   border-bottom-color: #107c41;
+}
+
+/* Exercise Target Header Styling */
+.target-header-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
 }
