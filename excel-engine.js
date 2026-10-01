@@ -1,13 +1,13 @@
 /**
- * VOCAB STUDIO PRO - EXCEL ENGINE (V2.1 REFACTORED)
- * Bộ tạo file Excel chuyên nghiệp, độc lập không Macro/VBA, tối ưu 100% cho mọi bản Excel
- * Powered by ExcelJS
+ * VOCAB STUDIO PRO - EXCEL ENGINE (V2.2 - MULTI-EXERCISE SUPPORT)
+ * Hỗ trợ nhiều cột làm bài & chấm điểm độc lập trên cùng 1 Sheet
+ * Các ô nhập & kết quả nằm ngay cạnh ô đáp án tương ứng
+ * Tương thích 100% Microsoft Excel, WPS Office, Google Sheets
  */
 
 const ExcelEngine = (function () {
   'use strict';
 
-  // Chuyển đổi số thứ tự cột sang chữ cái Excel (1 = A, 2 = B, 27 = AA...)
   function getColumnLetter(colIndex) {
     let temp = colIndex;
     let letter = '';
@@ -19,7 +19,6 @@ const ExcelEngine = (function () {
     return letter;
   }
 
-  // Bảng màu giao diện Excel Light Theme sang trọng
   const THEMES = {
     excelGreen: {
       name: 'Chuẩn Microsoft Excel (Xanh Lá)',
@@ -28,7 +27,6 @@ const ExcelEngine = (function () {
       accent: 'FF15803D',
       bannerText: 'FFFFFFFF',
       dashBg: 'FFF8FAFC',
-      cardBg: 'FFFFFFFF',
       cardBorder: 'FFE2E8F0',
       inputBg: 'FFFEFCE8',    // Vàng kem mềm
       inputBorder: 'FFEAB308',
@@ -45,7 +43,6 @@ const ExcelEngine = (function () {
       accent: 'FF2563EB',
       bannerText: 'FFFFFFFF',
       dashBg: 'FFF8FAFC',
-      cardBg: 'FFFFFFFF',
       cardBorder: 'FFE2E8F0',
       inputBg: 'FFFEFCE8',
       inputBorder: 'FFEAB308',
@@ -62,7 +59,6 @@ const ExcelEngine = (function () {
       accent: 'FF059669',
       bannerText: 'FFFFFFFF',
       dashBg: 'FFF0FDF4',
-      cardBg: 'FFFFFFFF',
       cardBorder: 'FFBBF7D0',
       inputBg: 'FFFEFCE8',
       inputBorder: 'FFEAB308',
@@ -75,7 +71,7 @@ const ExcelEngine = (function () {
   };
 
   /**
-   * Tạo workbook Excel tương tác tự động chấm điểm (.xlsx)
+   * Tạo file Excel .xlsx với nhiều cặp bài tập độc lập
    */
   async function generateWorkbook(config) {
     if (typeof ExcelJS === 'undefined') {
@@ -87,9 +83,10 @@ const ExcelEngine = (function () {
       subtitle = 'Luyện tập tương tác • Nhập đáp án vào cột màu vàng • Tự động tính điểm',
       author = 'Biên soạn bởi: Vocab Studio Pro • Hotline/Zalo: 09xx.xxx.xxx',
       themeKey = 'excelGreen',
-      targetColKey = null, // Cột đáp án cần chấm
+      exercisePairs = [], // Danh sách các cặp bài tập: [{ id, targetColKey, inputTitle, resultTitle }]
       protectSheet = true,
       password = '',
+      hideTargetColumns = false, // Ẩn cột đáp án gốc để học sinh không nhìn thấy
       columns = [],
       rows = []
     } = config;
@@ -109,76 +106,81 @@ const ExcelEngine = (function () {
       views: [{ showGridLines: true }]
     });
 
-    // Xác định cột làm đáp án cần chấm
-    let effectiveTargetKey = targetColKey;
-    if (!effectiveTargetKey) {
-      const explicitAnsCol = columns.find(c => c.isTarget);
-      if (explicitAnsCol) {
-        effectiveTargetKey = explicitAnsCol.key;
-      } else {
-        effectiveTargetKey = columns.length > 1 ? columns[1].key : columns[0].key;
-      }
-    }
-
-    // Xây dựng danh sách các cột trong Sheet
     const colDefs = [];
     let curIdx = 1;
 
-    // Col A: Mã từ (Khóa hàng ngang)
-    const colCode = { id: 'code', key: '__code__', letter: getColumnLetter(curIdx++), title: 'Mã Từ (ID)', width: 12 };
+    // Col A: Mã từ
+    const colCode = { type: 'code', letter: getColumnLetter(curIdx++), title: 'Mã Từ (ID)', width: 12 };
     colDefs.push(colCode);
 
     // Col B: STT
-    const colSTT = { id: 'stt', key: '__stt__', letter: getColumnLetter(curIdx++), title: 'STT', width: 7 };
+    const colSTT = { type: 'stt', letter: getColumnLetter(curIdx++), title: 'STT', width: 7 };
     colDefs.push(colSTT);
 
-    // Các cột dữ liệu của người dùng
-    let targetColLetter = null;
+    // Lưu ánh xạ các cặp bài tập với ký tự cột trong Excel
+    const mappedPairs = [];
+
     columns.forEach(col => {
       const letter = getColumnLetter(curIdx++);
-      if (col.key === effectiveTargetKey) {
-        targetColLetter = letter;
-      }
-      colDefs.push({
-        id: col.id,
+      const colDef = {
+        type: 'data',
         key: col.key,
         letter: letter,
         title: col.title || 'Dữ Liệu',
-        width: Math.max(18, Math.min(35, (col.title || '').length * 2 + 10))
+        width: Math.max(16, Math.min(35, (col.title || '').length * 2 + 8))
+      };
+      colDefs.push(colDef);
+
+      // Kiểm tra xem cột này có cặp bài tập nào không
+      const pairsForThisCol = exercisePairs.filter(p => p.targetColKey === col.key);
+      pairsForThisCol.forEach(pair => {
+        // Chèn Cột Ô Làm Bài NGAY CẠNH CỘT ĐÁP ÁN
+        const inputLetter = getColumnLetter(curIdx++);
+        const inDef = {
+          type: 'input',
+          pairId: pair.id,
+          targetLetter: letter,
+          letter: inputLetter,
+          title: pair.inputTitle || `Ô Nhập [${col.title}]`,
+          width: 24,
+          isInput: true
+        };
+        colDefs.push(inDef);
+
+        // Chèn Cột Kết Quả Chấm NGAY TIẾP THEO
+        const resLetter = getColumnLetter(curIdx++);
+        const resDef = {
+          type: 'result',
+          pairId: pair.id,
+          targetLetter: letter,
+          inputLetter: inputLetter,
+          letter: resLetter,
+          title: pair.resultTitle || `Kết Quả [${col.title}]`,
+          width: 15
+        };
+        colDefs.push(resDef);
+
+        mappedPairs.push({
+          pairId: pair.id,
+          targetTitle: col.title,
+          targetLetter: letter,
+          inputLetter: inputLetter,
+          resultLetter: resLetter
+        });
       });
     });
-
-    // Cột Ô Làm Bài (Học Sinh Nhập)
-    const inputColLetter = getColumnLetter(curIdx++);
-    const colInput = {
-      id: 'student_input',
-      key: '__input__',
-      letter: inputColLetter,
-      title: 'Ô Làm Bài (Học Sinh Nhập)',
-      width: 25,
-      isInput: true
-    };
-    colDefs.push(colInput);
-
-    // Cột Kết Quả Chấm
-    const resultColLetter = getColumnLetter(curIdx++);
-    const colResult = {
-      id: 'result_check',
-      key: '__result__',
-      letter: resultColLetter,
-      title: 'Kết Quả',
-      width: 15
-    };
-    colDefs.push(colResult);
 
     colDefs.forEach(cd => {
       const col = ws.getColumn(cd.letter);
       col.width = cd.width;
+      if (hideTargetColumns && mappedPairs.some(p => p.targetLetter === cd.letter)) {
+        col.hidden = true;
+      }
     });
 
     const startRow = 6;
     const endRow = startRow + rows.length - 1;
-    const lastColLetter = resultColLetter;
+    const lastColLetter = colDefs[colDefs.length - 1].letter;
 
     // ==========================================
     // 1. BANNER TIÊU ĐỀ & THƯƠNG HIỆU (ROWS 1 & 2)
@@ -205,12 +207,12 @@ const ExcelEngine = (function () {
     ws.getRow(3).height = 42;
     ws.getRow(4).height = 18;
 
-    function setupKpi(colLetter, label, formulaText, numFmt = null) {
+    function setupKpi(colLetter, label, formulaText, numFmt = null, customBg = null) {
       const c3 = ws.getCell(`${colLetter}3`);
       c3.value = { formula: formulaText };
       c3.font = { name: 'Segoe UI', size: 13, bold: true, color: { argb: theme.primary } };
       c3.alignment = { vertical: 'middle', horizontal: 'center' };
-      c3.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: theme.dashBg } };
+      c3.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: customBg || theme.dashBg } };
       c3.border = {
         top: { style: 'thin', color: { argb: theme.cardBorder } },
         bottom: { style: 'medium', color: { argb: theme.accent } },
@@ -232,13 +234,20 @@ const ExcelEngine = (function () {
       };
     }
 
-    // Các ô thống kê Dashboard
     setupKpi('A', 'TỔNG CÂU', `COUNTA(B${startRow}:B${endRow})`);
-    setupKpi('B', 'ĐÃ LÀM', `COUNTIF(${inputColLetter}${startRow}:${inputColLetter}${endRow},"<>")`);
-    setupKpi('C', 'ĐÚNG', `COUNTIF(${resultColLetter}${startRow}:${resultColLetter}${endRow},"*ĐÚNG*")`);
-    setupKpi('D', 'SAI', `COUNTIF(${resultColLetter}${startRow}:${resultColLetter}${endRow},"*SAI*")`);
-    setupKpi(inputColLetter, 'ĐIỂM SỐ (10)', `IF(A3=0,0,ROUND((C3/A3)*10,1))`, '0.0');
-    setupKpi(resultColLetter, 'TIẾN ĐỘ', `REPT("■",MIN(10,ROUND(B3/MAX(A3,1)*10,0)))&REPT("□",10-MIN(10,ROUND(B3/MAX(A3,1)*10,0)))&" "&TEXT(IF(A3=0,0,B3/A3),"0%")`);
+
+    const scoreCellLetters = [];
+
+    mappedPairs.forEach((pair) => {
+      setupKpi(pair.inputLetter, `ĐÚNG [${pair.targetTitle}]`, `COUNTIF(${pair.resultLetter}${startRow}:${pair.resultLetter}${endRow},"*ĐÚNG*")`, null, 'FFDCFCE7');
+      setupKpi(pair.resultLetter, `ĐIỂM [${pair.targetTitle}]`, `IF(A3=0,0,ROUND((${pair.inputLetter}3/A3)*10,1))`, '0.0', 'FFFEFCE8');
+      scoreCellLetters.push(`${pair.resultLetter}3`);
+    });
+
+    if (scoreCellLetters.length > 0) {
+      const avgScoreFormula = `IF(A3=0,0,ROUND(AVERAGE(${scoreCellLetters.join(',')}),1))`;
+      setupKpi('B', 'ĐIỂM TỔNG (10)', avgScoreFormula, '0.0', 'FFFEF3C7');
+    }
 
     colDefs.forEach(cd => {
       const c3 = ws.getCell(`${cd.letter}3`);
@@ -279,7 +288,7 @@ const ExcelEngine = (function () {
       ws.getRow(r).height = 25;
       const zebraBg = idx % 2 === 1 ? theme.zebraBg : 'FFFFFFFF';
 
-      // Col A: Mã từ định danh hàng ngang
+      // Col A: Mã từ
       const codeCell = ws.getCell(`A${r}`);
       codeCell.value = row.code || `ID-${String(idx + 1).padStart(3, '0')}`;
       codeCell.font = { name: 'Consolas', size: 9.5, color: { argb: 'FF64748B' } };
@@ -305,9 +314,9 @@ const ExcelEngine = (function () {
         right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
       };
 
-      // Các cột dữ liệu của người dùng
+      // Các cột dữ liệu
       columns.forEach(col => {
-        const colDef = colDefs.find(c => c.key === col.key);
+        const colDef = colDefs.find(c => c.type === 'data' && c.key === col.key);
         if (!colDef) return;
         const cell = ws.getCell(`${colDef.letter}${r}`);
         cell.value = String(row[col.key] || '');
@@ -322,69 +331,71 @@ const ExcelEngine = (function () {
         };
       });
 
-      // Cột Ô Học Sinh Nhập (Vàng kem mềm, được phép nhập)
-      const inCell = ws.getCell(`${inputColLetter}${r}`);
-      inCell.value = '';
-      inCell.font = { name: 'Segoe UI', size: 11, bold: true, color: { argb: 'FF1E293B' } };
-      inCell.alignment = { vertical: 'middle', horizontal: 'left' };
-      inCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: theme.inputBg } };
-      inCell.border = {
-        top: { style: 'thin', color: { argb: theme.inputBorder } },
-        bottom: { style: 'thin', color: { argb: theme.inputBorder } },
-        left: { style: 'medium', color: { argb: theme.inputBorder } },
-        right: { style: 'medium', color: { argb: theme.inputBorder } }
-      };
-      // Mở khóa để học sinh gõ:
-      inCell.protection = { locked: false };
+      // Từng cặp bài tập (Input + Result) kề cạnh
+      mappedPairs.forEach(pair => {
+        const inCell = ws.getCell(`${pair.inputLetter}${r}`);
+        inCell.value = '';
+        inCell.font = { name: 'Segoe UI', size: 11, bold: true, color: { argb: 'FF1E293B' } };
+        inCell.alignment = { vertical: 'middle', horizontal: 'left' };
+        inCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: theme.inputBg } };
+        inCell.border = {
+          top: { style: 'thin', color: { argb: theme.inputBorder } },
+          bottom: { style: 'thin', color: { argb: theme.inputBorder } },
+          left: { style: 'medium', color: { argb: theme.inputBorder } },
+          right: { style: 'medium', color: { argb: theme.inputBorder } }
+        };
+        inCell.protection = { locked: false };
 
-      // Cột Kết Quả Chấm: Độc lập 100%, không phụ thuộc vào ô khác
-      const inRef = `${inputColLetter}${r}`;
-      const tgtRef = targetColLetter ? `${targetColLetter}${r}` : `C${r}`;
-      const formulaCheck = `IF(TRIM(${inRef})="","",IF(ISNUMBER(SEARCH("|"&LOWER(TRIM(${inRef}))&"|","|"&LOWER(TRIM(${tgtRef}))&"|")),"✓ ĐÚNG","✗ SAI"))`;
+        const inRef = `${pair.inputLetter}${r}`;
+        const tgtRef = `${pair.targetLetter}${r}`;
+        const formulaCheck = `IF(TRIM(${inRef})="","",IF(ISNUMBER(SEARCH("|"&LOWER(TRIM(${inRef}))&"|","|"&LOWER(TRIM(${tgtRef}))&"|")),"✓ ĐÚNG","✗ SAI"))`;
 
-      const resCell = ws.getCell(`${resultColLetter}${r}`);
-      resCell.value = { formula: formulaCheck };
-      resCell.font = { name: 'Segoe UI', size: 10.5, bold: true, color: { argb: 'FF475569' } };
-      resCell.alignment = { vertical: 'middle', horizontal: 'center' };
-      resCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: zebraBg } };
-      resCell.border = {
-        top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-        bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-        left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
-        right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
-      };
+        const resCell = ws.getCell(`${pair.resultLetter}${r}`);
+        resCell.value = { formula: formulaCheck };
+        resCell.font = { name: 'Segoe UI', size: 10.5, bold: true, color: { argb: 'FF475569' } };
+        resCell.alignment = { vertical: 'middle', horizontal: 'center' };
+        resCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: zebraBg } };
+        resCell.border = {
+          top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+        };
+      });
     });
 
     // ==========================================
-    // 5. CONDITIONAL FORMATTING (ĐÚNG XANH / SAI ĐỎ)
+    // 5. CONDITIONAL FORMATTING
     // ==========================================
-    try {
-      ws.addConditionalFormatting({
-        ref: `${resultColLetter}${startRow}:${resultColLetter}${endRow}`,
-        rules: [
-          {
-            type: 'containsText',
-            operator: 'containsText',
-            text: 'ĐÚNG',
-            style: {
-              fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: theme.correctBg } },
-              font: { color: { argb: theme.correctText }, bold: true }
+    mappedPairs.forEach(pair => {
+      try {
+        ws.addConditionalFormatting({
+          ref: `${pair.resultLetter}${startRow}:${pair.resultLetter}${endRow}`,
+          rules: [
+            {
+              type: 'containsText',
+              operator: 'containsText',
+              text: 'ĐÚNG',
+              style: {
+                fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: theme.correctBg } },
+                font: { color: { argb: theme.correctText }, bold: true }
+              }
+            },
+            {
+              type: 'containsText',
+              operator: 'containsText',
+              text: 'SAI',
+              style: {
+                fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: theme.wrongBg } },
+                font: { color: { argb: theme.wrongText }, bold: true }
+              }
             }
-          },
-          {
-            type: 'containsText',
-            operator: 'containsText',
-            text: 'SAI',
-            style: {
-              fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: theme.wrongBg } },
-              font: { color: { argb: theme.wrongText }, bold: true }
-            }
-          }
-        ]
-      });
-    } catch (cfErr) {
-      console.warn('Conditional formatting error, skipped:', cfErr);
-    }
+          ]
+        });
+      } catch (e) {
+        console.warn('Conditional format warning:', e);
+      }
+    });
 
     // ==========================================
     // 6. DÒNG CHÚ THÍCH CUỐI BẢNG
@@ -392,12 +403,12 @@ const ExcelEngine = (function () {
     const footerRow = endRow + 2;
     ws.mergeCells(`A${footerRow}:${lastColLetter}${footerRow}`);
     const footCell = ws.getCell(`A${footerRow}`);
-    footCell.value = `★ Chúc bạn học tốt! ${author}`;
+    footCell.value = `★ Hãy làm bài cẩn thận và kiểm tra điểm số trên bảng Dashboard! ${author}`;
     footCell.font = { name: 'Segoe UI', size: 9, italic: true, color: { argb: 'FF94A3B8' } };
     footCell.alignment = { vertical: 'middle', horizontal: 'center' };
 
     // ==========================================
-    // 7. KHÓA BẢO VỆ SHEET (CHỐNG SỬA CÔNG THỨC)
+    // 7. KHÓA BẢO VỆ SHEET
     // ==========================================
     if (protectSheet) {
       await ws.protect(password || '', {
@@ -432,7 +443,8 @@ const ExcelEngine = (function () {
     return {
       success: true,
       fileName: cleanFileName,
-      totalQuestions: rows.length
+      totalQuestions: rows.length,
+      pairCount: mappedPairs.length
     };
   }
 
